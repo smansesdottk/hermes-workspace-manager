@@ -24,9 +24,17 @@ start http://127.0.0.1:8899
 REM Jalankan via waitress WSGI server produksi untuk Windows jika ada
 where waitress-serve >nul 2>nul
 if %errorlevel% equ 0 (
+    echo Menjalankan server via Waitress...
     waitress-serve --listen=127.0.0.1:8899 app:app
 ) else (
+    echo Menjalankan server via Flask...
     python app.py
 )
 
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] Server berhenti dengan error code %errorlevel%.
+)
+
 pause
+

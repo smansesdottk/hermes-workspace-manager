@@ -11,7 +11,6 @@ from __future__ import annotations
 import base64
 import io
 import os
-import grp
 import re
 import secrets
 import shutil
@@ -19,6 +18,15 @@ import sys
 import threading
 import time
 import uuid
+
+# Modul grup & user POSIX (hanya ada di Linux/macOS)
+try:
+    import grp
+    import pwd
+except ImportError:
+    grp = None
+    pwd = None
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor"))
 import qrcode
@@ -1246,13 +1254,15 @@ def e404(_):
 
 
 if __name__ == "__main__":
-    # drop ke grup docker bila dijalankan sebagai root (systemd)
-    try:
-        gid = grp.getgrnam("docker").gr_gid
-        if os.geteuid() == 0:
-            os.setgroups([gid] + [g.gr_gid for g in __import__("pwd").getpwall() if False])
-            os.setgid(gid)
-            os.setuid(1000)  # malik
-    except KeyError:
-        pass
+    # drop ke grup docker bila dijalankan sebagai root (systemd di Linux)
+    if grp and pwd and hasattr(os, "geteuid") and hasattr(os, "setgid"):
+        try:
+            gid = grp.getgrnam("docker").gr_gid
+            if os.geteuid() == 0:
+                os.setgroups([gid])
+                os.setgid(gid)
+                os.setuid(1000)
+        except Exception:
+            pass
     app.run(host="127.0.0.1", port=8899, debug=False)
+
