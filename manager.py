@@ -23,8 +23,23 @@ import docker_ops
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INSTANCES_DIR = os.path.join(BASE_DIR, "instances")
 DB_PATH = os.path.join(BASE_DIR, "panel.db")
-HERMES_IMAGE = os.environ.get("DM_HERMES_IMAGE", "local/hermes-agent-dockerman:latest")
-ROUTER_IMAGE = os.environ.get("DM_ROUTER_IMAGE", "decolua/9router:latest")
+# Prioritaskan image lokal jika ada, atau fallback ke official image di Docker Hub
+def _resolve_default_hermes_image() -> str:
+    env_img = os.environ.get("DM_HERMES_IMAGE")
+    if env_img:
+        return env_img
+    # Jika image local/hermes-agent-dockerman:latest sudah ter-build di mesin ini
+    if docker_ops.has_image("local/hermes-agent-dockerman:latest"):
+        return "local/hermes-agent-dockerman:latest"
+    # Fallback ke image resmi Docker Hub publik (siap di-pull di Windows/Linux mana pun)
+    return "nousresearch/hermes-agent:latest"
+
+def _resolve_default_router_image() -> str:
+    return os.environ.get("DM_ROUTER_IMAGE", "decolua/9router:latest")
+
+HERMES_IMAGE = _resolve_default_hermes_image()
+ROUTER_IMAGE = _resolve_default_router_image()
+
 DEFAULT_LIMITS = ("1.00", "1500m", "8G")  # CPU, RAM, writable layer
 # Batas atas pemindaian port berpasangan (hermes, router).
 PORT_SCAN_CEILING = 29998

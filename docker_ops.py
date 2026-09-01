@@ -356,9 +356,16 @@ stop_model_setup = stop_instance_terminal
 
 
 def has_docker() -> bool:
-    return os_access() and shutil.which(DOCKER_BIN) is not None
+    return shutil.which(DOCKER_BIN) is not None or shutil.which("docker") is not None
+
+
+def has_image(image_name: str) -> bool:
+    """Mengecek apakah image docker tertentu sudah ada di mesin lokal."""
+    r = _run([DOCKER_BIN, "image", "inspect", image_name], timeout=15)
+    return r["ok"] and r["code"] == 0
 
 
 def os_access() -> bool:
+
     import os
     return os.access(DOCKER_BIN, os.X_OK)
