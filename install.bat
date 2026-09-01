@@ -5,6 +5,8 @@ REM ============================================================================
 title Hermes Workspace Manager - Setup
 color 0B
 
+cd /d "%~dp0"
+
 echo ================================================================
 echo    Hermes Workspace Manager - 1-Click Setup ^& Installer (Windows)
 echo ================================================================
@@ -35,19 +37,25 @@ if %errorlevel% neq 0 (
 REM 3. Setup Virtual Environment
 echo.
 echo [3/4] Menyiapkan Virtual Environment (.venv)...
-if not exist ".venv" (
+if not exist ".venv\Scripts\activate.bat" (
     echo Membuat folder .venv...
     python -m venv .venv
 )
 
-call .venv\Scripts\activate.bat
+if not exist ".venv\Scripts\activate.bat" (
+    echo [ERROR] Gagal membuat virtual environment (.venv).
+    pause
+    exit /b 1
+)
+
+call ".venv\Scripts\activate.bat"
 python -m pip install --upgrade pip --quiet
 echo Memasang dependensi dari requirements.txt...
 pip install -r requirements.txt --quiet
 
 REM 4. Inisialisasi Database
 echo.
-[4/4] Menginisialisasi Database & Security Keys...
+echo [4/4] Menginisialisasi Database dan Security Keys...
 python -c "import manager; manager.init_db(); print('Database panel.db siap.')"
 if %errorlevel% neq 0 (
     echo [ERROR] Gagal menginisialisasi database.
@@ -57,9 +65,8 @@ if %errorlevel% neq 0 (
 
 echo.
 echo ================================================================
-echo       INSTALASI SELESAI & SIAP DIGUNAKAN!
+echo       INSTALASI SELESAI DAN SIAP DIGUNAKAN!
 echo ================================================================
-
 echo.
 echo Anda dapat menjalankan aplikasi dengan klik ganda file "run.bat"
 echo.
