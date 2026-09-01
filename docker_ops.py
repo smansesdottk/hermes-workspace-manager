@@ -68,10 +68,13 @@ def validate_slug(slug: str) -> str:
 
 def _run(argv: list[str], timeout: int = 60) -> dict:
     """Jalankan subprocess tanpa shell. Return dict hasil."""
+    env = os.environ.copy()
+    if sys.platform != "win32":
+        env["PATH"] = "/usr/bin:/bin:/usr/local/bin:" + env.get("PATH", "")
     try:
         p = subprocess.run(
             argv, capture_output=True, text=True,
-            timeout=timeout, env={"PATH": "/usr/bin:/bin:/usr/local/bin"},
+            timeout=timeout, env=env,
         )
         return {"ok": p.returncode == 0, "out": p.stdout[-20000:], "err": p.stderr[-8000:], "code": p.returncode}
     except subprocess.TimeoutExpired:
@@ -80,10 +83,28 @@ def _run(argv: list[str], timeout: int = 60) -> dict:
         return {"ok": False, "out": "", "err": str(e), "code": -1}
 
 
+
 def compose(project_dir: str, *args: str, timeout: int = 300) -> dict:
     """docker compose di dalam folder project instance."""
-    return _run([DOCKER_BIN, "compose", "-f", f"{project_dir}/compose.yaml", "--project-directory", project_dir,
-                 *args], timeout=timeout)
+    # Pastikan kompatibilitas Docker Compose V2 (docker compose) dan V1 (docker-compose)
+    compose_file = os.path.join(project_dir, "docker-compose.yml")
+    if not os.path.isfile(compose_file):
+        compose_file = os.path.join(project_dir, "compose.yaml")
+        
+    # Coba jalankan: docker compose -f <file> ...
+    cmd = [DOCKER_BIN, "compose", "-f", compose_file, "--project-directory", project_dir, *args]
+    r = _run(cmd, timeout=timeout)
+    
+    # Jika sistem Windows/Linux lama tidak mengenal subcommand 'compose' (hanya punya docker-compose biner terpisah)
+    if not r["ok"] and ("is not a docker command" in r["err"] or "unknown shorthand flag" in r["err"] or "unknown flag" in r["err"]):
+        dc_bin = shutil.which("docker-compose") or "docker-compose"
+        alt_cmd = [dc_bin, "-f", compose_file, "--project-directory", project_dir, *args]
+        r_alt = _run(alt_cmd, timeout=timeout)
+        if r_alt["ok"] or r_alt["code"] == 0:
+            return r_alt
+            
+    return r
+
 
 
 def container_name(instance: str, service: str) -> str:
