@@ -47,13 +47,19 @@ pip install -r requirements.txt --quiet
 
 REM 4. Inisialisasi Database
 echo.
-echo [4/4] Menginisialisasi Database ^& Security Keys...
+[4/4] Menginisialisasi Database & Security Keys...
 python -c "import manager; manager.init_db(); print('Database panel.db siap.')"
+if %errorlevel% neq 0 (
+    echo [ERROR] Gagal menginisialisasi database.
+    pause
+    exit /b 1
+)
 
 echo.
 echo ================================================================
-echo       INSTALASI SELESAI ^& SIAP DIGUNAKAN!
+echo       INSTALASI SELESAI & SIAP DIGUNAKAN!
 echo ================================================================
+
 echo.
 echo Anda dapat menjalankan aplikasi dengan klik ganda file "run.bat"
 echo.

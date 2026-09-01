@@ -11,19 +11,33 @@ from __future__ import annotations
 
 import json
 import os
-import pty
 import re
 import shutil
 import struct
 import subprocess
+import sys
 import threading
 import time
 import uuid
-import fcntl
-import termios
+
+# Modul PTY POSIX (hanya ada di Linux/macOS, tidak tersedia secara bawaan di Windows)
+try:
+    import pty
+    import tty
+    import termios
+    import fcntl
+    _HAS_PTY = True
+except ImportError:
+    pty = None
+    tty = None
+    termios = None
+    fcntl = None
+    _HAS_PTY = False
 
 SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{1,30}$")
-DOCKER_BIN = "/usr/bin/docker"
+# Deteksi biner Docker secara dinamis lintas platform (Linux / macOS / Windows)
+DOCKER_BIN = shutil.which("docker") or ("/usr/bin/docker" if sys.platform != "win32" else "docker")
+
 
 
 def validate_slug(slug: str) -> str:
@@ -94,14 +108,31 @@ def stats_line(container: str) -> dict | None:
 
 
 def disk_usage(path: str) -> int:
-    """du -sb pada folder data instance."""
-    r = _run(["/usr/bin/du", "-sb", path], timeout=60)
-    if not r["ok"]:
+    """Menghitung total ukuran folder data instance lintas platform."""
+    if not os.path.exists(path):
         return 0
+    if sys.platform != "win32" and shutil.which("du"):
+        r = _run([shutil.which("du") or "/usr/bin/du", "-sb", path], timeout=60)
+        if r["ok"]:
+            try:
+                return int(r["out"].split()[0])
+            except (ValueError, IndexError):
+                pass
+    # Fallback portable pure-Python untuk Windows / sistem tanpa 'du'
+    total = 0
     try:
-        return int(r["out"].split()[0])
-    except (ValueError, IndexError):
-        return 0
+        for root, _, files in os.walk(path):
+            for f in files:
+                fp = os.path.join(root, f)
+                try:
+                    if not os.path.islink(fp):
+                        total += os.path.getsize(fp)
+                except OSError:
+                    pass
+    except Exception:
+        pass
+    return total
+
 
 
 # Terminal PTY session management
@@ -126,6 +157,8 @@ def start_instance_terminal(instance: str) -> str:
     validate_slug(instance)
     if not ps_one(instance, "hermes"):
         raise RuntimeError("Container Hermes tidak sedang berjalan")
+    if not _HAS_PTY or pty is None:
+        raise RuntimeError("Fitur PTY Terminal interaktif berbasis Linux/Unix belum didukung di native Windows host. Gunakan terminal CLI langsung via 'docker exec'.")
     with _setup_lock:
         _cleanup_setup_runs()
         for run_id, run in _setup_runs.items():
@@ -135,10 +168,12 @@ def start_instance_terminal(instance: str) -> str:
         
         # Set default window size (80 cols x 24 rows)
         try:
-            winsize = struct.pack("HHHH", 24, 80, 0, 0)
-            fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
+            if fcntl and termios:
+                winsize = struct.pack("HHHH", 24, 80, 0, 0)
+                fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
         except Exception:
             pass
+
 
         process = subprocess.Popen(
             [DOCKER_BIN, "exec", "-i", "-t",
@@ -198,7 +233,7 @@ def resize_instance_terminal(run_id: str, rows: int, cols: int) -> None:
     """Mengubah ukuran geometri terminal PTY secara dinamis."""
     with _setup_lock:
         run = _setup_runs.get(run_id)
-        if not run:
+        if not run or not fcntl or not termios:
             return
         try:
             r = max(1, min(int(rows), 200))
@@ -207,6 +242,7 @@ def resize_instance_terminal(run_id: str, rows: int, cols: int) -> None:
             fcntl.ioctl(run["fd"], termios.TIOCSWINSZ, winsize)
         except Exception:
             pass
+
 
 
 def stop_instance_terminal(run_id: str) -> None:
