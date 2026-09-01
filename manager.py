@@ -1222,6 +1222,28 @@ def instance_detail(inst: dict) -> dict:
         if docker_ops.ps_one(inst["slug"], "hermes") or docker_ops.ps_one(inst["slug"], "9router"):
             instance_action(inst["slug"], "stop")
             
+    stats_h = None
+    stats_r = None
+    try:
+        stats_h = docker_ops.stats_line(docker_ops.container_name(inst["slug"], "hermes"))
+    except Exception:
+        pass
+    try:
+        stats_r = docker_ops.stats_line(docker_ops.container_name(inst["slug"], "9router"))
+    except Exception:
+        pass
+
+    logs_h = ""
+    logs_r = ""
+    try:
+        logs_h = docker_ops.logs(inst["slug"], "hermes", 80)
+    except Exception:
+        pass
+    try:
+        logs_r = docker_ops.logs(inst["slug"], "9router", 80)
+    except Exception:
+        pass
+
     out = {
         "slug": inst["slug"],
         "status": refresh_status(inst["slug"]),
@@ -1229,16 +1251,17 @@ def instance_detail(inst: dict) -> dict:
         "router_up": docker_ops.ps_one(inst["slug"], "9router"),
         "hermes_port": inst["hermes_port"],
         "router_port": inst["router_port"],
-        "logs_hermes": docker_ops.logs(inst["slug"], "hermes", 80),
-        "logs_router": docker_ops.logs(inst["slug"], "9router", 80),
-        "stats_hermes": docker_ops.stats_line(docker_ops.container_name(inst["slug"], "hermes")),
-        "stats_router": docker_ops.stats_line(docker_ops.container_name(inst["slug"], "9router")),
+        "logs_hermes": logs_h,
+        "logs_router": logs_r,
+        "stats_hermes": stats_h,
+        "stats_router": stats_r,
         "disk": docker_ops.disk_usage(instance_dir(inst["slug"])),
         "current_model": get_instance_active_model(inst["slug"]),
         "soul": get_instance_soul(inst["slug"]),
         "expiry": expiry,
     }
     return out
+
 
 
 

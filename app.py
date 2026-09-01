@@ -515,9 +515,15 @@ def _owned_instance(slug: str):
 
 @app.route("/i/<slug>")
 def instance_page(slug: str):
-    u, inst = _owned_instance(slug)
-    detail = manager.instance_detail(inst)
-    return render_template("instance.html", me=u, inst=inst, d=detail, active_tab="dashboard")
+    try:
+        u, inst = _owned_instance(slug)
+        detail = manager.instance_detail(inst)
+        return render_template("instance.html", me=u, inst=inst, d=detail, active_tab="dashboard")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return render_template("error.html", code=500, msg=f"Gagal memuat instance: {str(e)}"), 500
+
 
 
 @app.route("/i/<slug>/settings")
