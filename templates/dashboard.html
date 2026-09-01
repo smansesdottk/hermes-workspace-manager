@@ -1,0 +1,417 @@
+{% extends "base.html" %}{% block body %}
+<div class="hero"><div><h1>Workspace</h1><p class="sub">Instance pribadi, terisolasi, dan siap dipakai.</p></div>{% if me.role=='admin' %}<span class="badge b-run">Admin control</span>{% endif %}</div>
+
+<!-- Notifikasi Peringatan Masa Berlangganan (Khusus Tampil untuk Pengguna Biasa / Pemilik Instance) -->
+{% if me.role != 'admin' %}
+  {% for i in instances %}
+    {% if i.expiry and i.expiry.warning and not i.expiry.is_expired %}
+    <div class="flash" style="background:rgba(245,191,88,.12);border-color:rgba(245,191,88,.35);color:#ffd98a;margin-bottom:14px">
+      ⚠️ <b>Pemberitahuan Masa Aktif:</b> Instance <b>{{ i.slug }}</b> akan berakhir dalam <b>{{ i.expiry.label }}</b>. Harap hubungi administrator untuk memperpanjang masa aktif agar layanan tidak terputus.
+    </div>
+    {% elif i.expiry and i.expiry.is_expired %}
+    <div class="flash" style="background:rgba(250,119,119,.12);border-color:rgba(250,119,119,.35);color:#ffb3b3;margin-bottom:14px">
+      ⛔ <b>Langganan Berakhir:</b> Masa aktif instance <b>{{ i.slug }}</b> telah kedaluwarsa. Kontainer otomatis dinonaktifkan dan akses workspace terkunci. Silakan hubungi administrator untuk mengaktifkan kembali.
+    </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{% if me.role == 'admin' %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+    <h2 style="margin:0">Instance Aktif &amp; Masa Berlangganan</h2>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <!-- Update Semua Instance -->
+      <form method="post" action="{{ url_for('admin_update_all_instances') }}" onsubmit="return confirm('Update seluruh instance aktif ke versi image Hermes & 9Router terbaru?')">
+        <button type="submit" class="ghost" style="font-size:12px;padding:5px 12px;color:var(--acc2);border-color:rgba(130,143,255,.35)">🔄 Update Semua Instance</button>
+      </form>
+    </div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Instance</th>
+          <th>Pemilik</th>
+          <th>Status</th>
+          <th>Masa Berlangganan (Plan)</th>
+          <th>Penggunaan</th>
+          <th>Limit Resource</th>
+          <th style="text-align:right">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in instances %}
+        <tr>
+          <td>
+            <a class="slug" href="{{url_for('instance_page',slug=i.slug)}}"><b>{{i.slug}}</b></a>
+            <div class="mono" style="font-size:11px;color:var(--dim)">:{{i.hermes_port}} / :{{i.router_port}}</div>
+          </td>
+          <td><b>{{i.username}}</b></td>
+          <td>
+            {% if i.expiry.is_expired %}
+              <span class="badge b-err" title="Masa aktif habis">expired</span>
+            {% else %}
+              <span class="badge b-{{'run' if i.status=='running' else ('stop' if i.status=='stopped' else ('err' if i.status=='error' else 'part'))}}">{{i.status}}</span>
+            {% endif %}
+          </td>
+          <td>
+            <!-- Form Edit Masa Berlangganan -->
+            <form method="post" action="{{url_for('admin_update_plan',slug=i.slug)}}" style="display:flex;flex-direction:column;gap:4px">
+              <div style="font-size:12px;font-weight:600;color:{{ 'var(--err)' if i.expiry.is_expired else ('var(--warn)' if i.expiry.warning else 'var(--acc2)') }}">
+                {{ '🔒 ' if i.expiry.is_expired else '' }}{{ i.expiry.label }}
+              </div>
+              <div style="display:inline-flex;gap:4px;align-items:center">
+                <select name="plan" style="padding:3px 6px;font-size:11.5px;background-color:#12151a;color:#f7f8f8">
+                  <option value="lifetime" {{ 'selected' if i.expires_at=='lifetime' else '' }} style="background:#12151a;color:#f7f8f8">Lifetime (Selamanya)</option>
+                  <option value="1d" style="background:#12151a;color:#f7f8f8">1 Hari (Ujicoba)</option>
+                  <option value="2d" style="background:#12151a;color:#f7f8f8">2 Hari (Ujicoba)</option>
+                  <option value="3d" style="background:#12151a;color:#f7f8f8">3 Hari (Ujicoba)</option>
+                  <option value="7d" style="background:#12151a;color:#f7f8f8">7 Hari (Trial)</option>
+                  <option value="1m" style="background:#12151a;color:#f7f8f8">1 Bulan</option>
+                  <option value="3m" style="background:#12151a;color:#f7f8f8">3 Bulan</option>
+                  <option value="6m" style="background:#12151a;color:#f7f8f8">6 Bulan</option>
+                  <option value="1y" style="background:#12151a;color:#f7f8f8">1 Tahun</option>
+                  <option value="expired" {{ 'selected' if i.expiry.is_expired else '' }} style="background:#12151a;color:#fa7777">⛔ Kunci / Langganan Habis</option>
+                </select>
+                <button class="ghost" style="padding:3px 6px;font-size:11px">Set</button>
+              </div>
+            </form>
+          </td>
+          <td class="mono" style="font-size:12px">{{(i.disk/1048576)|round(0)|int}} MB</td>
+          <td>
+            <form class="limit-form" method="post" action="{{url_for('admin_update_limits',slug=i.slug)}}" style="display:inline-flex;align-items:center;gap:3px">
+              <input name="cpu" value="{{i.cpu_limit}}" title="CPU Limit" style="width:44px;padding:3px 5px;font-size:11.5px;text-align:center">
+              <input name="memory" value="{{i.memory_limit}}" title="RAM Limit" style="width:52px;padding:3px 5px;font-size:11.5px;text-align:center">
+              <input name="storage" value="{{i.storage_limit}}" title="Storage Quota" style="width:40px;padding:3px 5px;font-size:11.5px;text-align:center">
+              <button class="ghost" style="padding:3px 6px;font-size:11px">Simpan</button>
+            </form>
+          </td>
+          <td style="text-align:right;white-space:nowrap">
+            <!-- Update 1 Instance -->
+            <form method="post" action="{{url_for('admin_update_instance_containers',slug=i.slug)}}" onsubmit="return confirm('Update instance {{i.slug}} ke versi image terbaru? (Data percakapan & database tetap aman)')" style="display:inline">
+              <button type="submit" class="ghost" style="padding:4px 9px;font-size:11.5px;color:var(--acc2);border-color:rgba(130,143,255,.3)" title="Update container ke image master terbaru">🔄 Update</button>
+            </form>
+            <form method="post" action="{{url_for('admin_destroy',slug=i.slug)}}" onsubmit="return confirm('Hapus instance {{i.slug}}? PERHATIAN: Tindakan ini permanen.')" style="display:inline-flex;align-items:center;gap:5px;margin-left:4px">
+              <label class="wipe-label" title="Centang jika ingin menghapus seluruh file & folder data di disk"><input type="checkbox" name="wipe" value="1"> <span style="font-size:11.5px;color:var(--dim)">+data</span></label>
+              <button class="danger" style="padding:4px 9px;font-size:11.5px">Hapus</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not instances %}<tr><td colspan="7" class="empty">Belum ada instance yang aktif.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+  <p class="kv foot-note">💡 Instance yang kedaluwarsa otomatis dimatikan (stop) dan akses workspace terkunci hingga masa aktif diperpanjang.</p>
+</div>
+
+<div class="grid2">
+  <!-- Form Buat Instance Bersih & Pilihan Paket -->
+  <div class="card">
+    <h2>Buat Instance Bersih</h2>
+    <form method="post" action="{{url_for('admin_create_instance')}}">
+      <p><input name="slug" placeholder="Nama instance (misal: budi-ai)" required pattern="[a-z][a-z0-9-]{1,30}" style="width:100%"></p>
+      <p><input name="owner" placeholder="Username pemilik instance" required style="width:100%"></p>
+      <p><input name="dash_password" placeholder="Password admin Hermes (opsional / acak)" style="width:100%"></p>
+      
+      <p>
+        <label class="kv" style="font-size:12.5px;display:block;margin-bottom:4px">Paket Masa Berlangganan:</label>
+        <select name="plan" id="create-plan-select" style="width:100%;background-color:#12151a;color:#f7f8f8;border:1px solid var(--line)" onchange="document.getElementById('custom-months-box').hidden = this.value !== 'custom_m'">
+          <option value="lifetime" style="background:#12151a;color:#f7f8f8">Lifetime (Selamanya)</option>
+          <option value="1d" style="background:#12151a;color:#f7f8f8">Ujicoba — 1 Hari</option>
+          <option value="2d" style="background:#12151a;color:#f7f8f8">Ujicoba — 2 Hari</option>
+          <option value="3d" style="background:#12151a;color:#f7f8f8">Ujicoba — 3 Hari</option>
+          <option value="7d" style="background:#12151a;color:#f7f8f8">Paket Trial — 7 Hari</option>
+          <option value="1m" style="background:#12151a;color:#f7f8f8">Paket 1 Bulan (30 Hari)</option>
+          <option value="3m" style="background:#12151a;color:#f7f8f8">Paket 3 Bulan (90 Hari)</option>
+          <option value="6m" style="background:#12151a;color:#f7f8f8">Paket 6 Bulan (180 Hari)</option>
+          <option value="1y" style="background:#12151a;color:#f7f8f8">Paket 1 Tahun (365 Hari)</option>
+          <option value="custom_m" style="background:#12151a;color:#f7f8f8">Kustom Jumlah Bulan...</option>
+          <option value="expired" style="background:#12151a;color:#fa7777">⛔ Kunci / Langganan Habis</option>
+        </select>
+      </p>
+
+      <p id="custom-months-box" hidden>
+        <input name="custom_months" type="number" min="1" max="120" placeholder="Jumlah bulan (contoh: 2, 4, 12)" style="width:100%">
+      </p>
+
+      <button style="width:100%;margin-top:6px">Buat &amp; Jalankan Instance</button>
+    </form>
+    <p class="kv foot-note">Default resource: 1 CPU · 1.5 GB RAM · Kuota storage 8 GB.</p>
+  </div>
+
+  <!-- Manajemen Akun Pengguna -->
+  <div class="card">
+    <h2>Manajemen User</h2>
+    <div class="tablewrap">
+      <table class="usertable">
+        <thead>
+          <tr>
+            <th>User &amp; Kepemilikan</th>
+            <th style="text-align:right">Tindakan Akun</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <b>{{u.username}}</b>
+                <span class="badge" style="font-size:11px;padding:1px 6px">{{u.role}}</span>
+                {% if u.instances_owned %}
+                  <span class="badge" style="font-size:11px;padding:1px 6px;background:rgba(94,106,210,.12);color:#c7caff;border-color:rgba(94,106,210,.3)">{{ u.instance_count }} instance</span>
+                {% endif %}
+              </div>
+
+              {% if u.instances_owned %}
+              <!-- Daftar instance langsung di bawah pemilik: mengurangi risiko salah hapus akun -->
+              <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+                {% for owned in u.instances_owned %}
+                  <a href="{{ url_for('instance_page',slug=owned.slug) }}" title="Buka instance {{ owned.slug }}" style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border:1px solid {{ 'rgba(250,119,119,.38)' if owned.expiry.is_expired else 'var(--line2)' }};border-radius:6px;background:{{ 'rgba(250,119,119,.09)' if owned.expiry.is_expired else 'rgba(255,255,255,.035)' }};font-family:'JetBrains Mono',monospace;font-size:11.5px;color:{{ '#ffb3b3' if owned.expiry.is_expired else '#dfe2ff' }}">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ '#fa7777' if owned.expiry.is_expired else ('#10b981' if owned.status=='running' else '#8a8f98') }}"></span>
+                    {{ owned.slug }}
+                    <span style="opacity:.75;font-family:inherit">· {{ 'expired' if owned.expiry.is_expired else owned.status }}</span>
+                  </a>
+                {% endfor %}
+              </div>
+              <div class="kv" style="font-size:11px;margin-top:5px">Klik nama instance untuk membukanya. Hapus User akan menghapus seluruh instance di atas.</div>
+              {% else %}
+                <div class="kv" style="font-size:12px;margin-top:4px;opacity:.7">tanpa instance</div>
+              {% endif %}
+            </td>
+            <td class="cell-actions">
+              <form method="post" action="{{url_for('admin_toggle_user',uid=u.id)}}" style="display:inline">
+                <button class="ghost" style="padding:5px 9px;font-size:12px">{{'Nonaktifkan' if u.is_active else 'Aktifkan'}}</button>
+              </form>
+              <form method="post" action="{{url_for('admin_reset_password',uid=u.id)}}" style="display:inline" onsubmit="return confirm('Reset password user {{u.username}} menjadi password acak baru?')">
+                <button class="ghost" style="padding:5px 9px;font-size:12px;color:var(--warn);border-color:rgba(245,191,88,.3)">Reset Password</button>
+              </form>
+              <form method="post" action="{{url_for('admin_delete_user',uid=u.id)}}" style="display:inline" onsubmit="return confirm('PERHATIAN: Hapus user {{u.username}} juga akan menghapus {{u.instance_count}} instance: {{u.slugs or 'tidak ada'}} beserta seluruh datanya. Tindakan ini permanen. Lanjutkan?')">
+                <button class="danger" style="padding:5px 9px;font-size:12px">Hapus Akun</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Form Tambah User -->
+    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+      <h3 style="font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Tambah Akun Baru</h3>
+      <form class="row" method="post" action="{{url_for('admin_create_user')}}" style="gap:6px">
+        <input name="username" placeholder="Username baru" required style="flex:1;min-width:110px">
+        <input name="password" type="password" placeholder="Password opsional" style="flex:1;min-width:110px">
+        <select name="role" style="padding:8px">
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </select>
+        <button style="padding:8px 14px">Tambah</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Manajemen Konfigurasi Paket Berlangganan (Pricing) -->
+<details class="card" style="margin-top:18px" open>
+  <summary class="logsum"><b>💳 Konfigurasi Paket Berlangganan (Nama, Fitur, Harga &amp; Stok Landing Page)</b></summary>
+  <div style="display:flex;flex-direction:column;gap:18px;margin-top:16px">
+    {% for p in plans %}
+    <form method="post" action="{{ url_for('admin_update_pricing', plan_id=p.id) }}" class="card" style="margin:0;padding:16px;background:rgba(255,255,255,.02);border:1px solid var(--line2)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <input name="name" value="{{ p.name }}" placeholder="Nama Paket" style="font-weight:700;font-size:15px;width:240px" required>
+          <span class="mono" style="font-size:11px;color:var(--dim)">ID: {{ p.id }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <select name="is_active" style="padding:6px 10px;font-size:12px">
+            <option value="1" {{ 'selected' if p.is_active==1 else '' }}>Aktif (Tayang)</option>
+            <option value="0" {{ 'selected' if p.is_active==0 else '' }}>Nonaktif (Sembunyikan)</option>
+          </select>
+          <button class="ghost" style="padding:6px 14px;font-size:12px;background:var(--acc);color:#fff">Simpan Paket</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;margin-bottom:12px">
+        <div>
+          <label class="kv" style="font-size:11.5px;display:block;margin-bottom:3px">Harga Asli (Rp):</label>
+          <input name="original_price" type="number" value="{{ p.original_price }}" style="width:100%;padding:6px 8px;font-size:13px" required>
+        </div>
+        <div>
+          <label class="kv" style="font-size:11.5px;display:block;margin-bottom:3px">Harga Promo (Rp):</label>
+          <input name="promo_price" type="number" value="{{ p.promo_price }}" style="width:100%;padding:6px 8px;font-size:13px" required>
+        </div>
+        <div>
+          <label class="kv" style="font-size:11.5px;display:block;margin-bottom:3px">Sisa Stok Slot:</label>
+          <input name="stock" type="number" value="{{ p.stock }}" style="width:100%;padding:6px 8px;font-size:13px;text-align:center" required>
+        </div>
+        <div>
+          <label class="kv" style="font-size:11.5px;display:block;margin-bottom:3px">Badge Label:</label>
+          <input name="badge" value="{{ p.badge }}" placeholder="Contoh: Terpopuler" style="width:100%;padding:6px 8px;font-size:13px">
+        </div>
+      </div>
+
+      <div>
+        <label class="kv" style="font-size:11.5px;display:block;margin-bottom:4px">Daftar Fitur Paket (1 baris per poin fitur):</label>
+        <textarea name="features" rows="4" style="width:100%;padding:8px 10px;font-size:12.5px;font-family:inherit;background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:6px;color:var(--tx);line-height:1.5" placeholder="Tuliskan poin-poin fitur...">{{ p.features|join('\n') }}</textarea>
+      </div>
+    </form>
+    {% endfor %}
+  </div>
+  <p class="kv foot-note">💡 Perubahan nama paket, poin fitur, harga, diskon promo, stok slot, atau status aktif langsung tersinkronisasi ke landing page beranda secara real-time.</p>
+</details>
+
+<!-- Manajemen Update Image Bibit (Admin Seed Update) -->
+<details class="card" style="margin-top:18px" open id="admin-seed-box">
+  <summary class="logsum"><b>🚀 Pembaruan Image Bibit (Hermes Agent &amp; 9Router)</b></summary>
+  <p class="kv" style="margin:8px 0 14px;font-size:13px">
+    Tarik versi terbaru dari repositori resmi untuk memperbarui master image. Setiap instance baru yang dibuat setelahnya akan otomatis menggunakan master image ini.
+  </p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div style="background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:10px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+        <h3 style="font-size:14.5px;margin:0">🌱 Master Bibit Hermes Agent</h3>
+        <span id="hermes-seed-badge" class="badge" style="font-size:10.5px">mengecek…</span>
+      </div>
+      
+      <div style="background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.6">
+        <div><b>Versi Bibit Lokal:</b> <span id="hermes-seed-local" class="mono" style="color:var(--acc2)">memuat…</span></div>
+        <div><b>Versi Remote Git:</b> <span id="hermes-seed-remote" class="mono" style="color:#a7f3d0">memuat…</span></div>
+      </div>
+
+      <form method="post" action="{{ url_for('admin_update_hermes_seed') }}" onsubmit="return confirm('Mulai proses pull & build ulang image bibit Hermes Agent? Proses berjalan di background tanpa blocking.')">
+        <button type="submit" id="btn-rebuild-hermes" class="ghost" style="font-size:12px;padding:7px 14px;color:var(--acc2);border-color:rgba(130,143,255,.35)">🔄 Update &amp; Build Bibit Hermes</button>
+      </form>
+      <div id="seed-build-progress" class="kv" style="font-size:11.5px;margin-top:8px;display:none"></div>
+    </div>
+
+    <div style="background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:10px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+        <h3 style="font-size:14.5px;margin:0">🌱 Master Bibit 9Router Gateway</h3>
+        <span class="badge b-run" style="font-size:10.5px">official</span>
+      </div>
+      
+      <div style="background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.6">
+        <div><b>Image:</b> <code style="font-size:12px">decolua/9router:latest</code></div>
+        <div><b>Registry:</b> <span>Docker Hub Official Repository</span></div>
+      </div>
+
+      <form method="post" action="{{ url_for('admin_update_router_seed') }}" onsubmit="return confirm('Tarik (docker pull) image resmi terbaru 9Router dari Docker Hub?')">
+        <button type="submit" class="ghost" style="font-size:12px;padding:7px 14px;color:var(--ok);border-color:rgba(16,185,129,.35)">⬇️ Pull Image 9Router Terbaru</button>
+      </form>
+    </div>
+  </div>
+</details>
+
+<script>
+(async function initAdminSeedChecker(){
+  const localEl = document.getElementById('hermes-seed-local');
+  const remoteEl = document.getElementById('hermes-seed-remote');
+  const badgeEl = document.getElementById('hermes-seed-badge');
+  const progEl = document.getElementById('seed-build-progress');
+  const btnEl = document.getElementById('btn-rebuild-hermes');
+  if(!localEl) return;
+
+  async function checkStatus(){
+    try {
+      let r = await fetch('/admin/seeds/versions');
+      if(!r.ok) return;
+      let data = await r.json();
+      let git = data.git || {};
+      let seed = data.seed_status || {};
+
+      if(localEl) localEl.textContent = git.local_commit || 'unknown';
+      if(remoteEl) remoteEl.textContent = git.remote_commit || 'unknown';
+
+      if(seed.running){
+        if(badgeEl){ badgeEl.textContent = 'sedang build…'; badgeEl.className = 'badge b-part'; }
+        if(progEl){ progEl.style.display = 'block'; progEl.textContent = '⏳ ' + (seed.message || 'Build sedang berjalan di background...'); }
+        if(btnEl){ btnEl.disabled = true; }
+        setTimeout(checkStatus, 3000);
+      } else {
+        if(btnEl){ btnEl.disabled = false; }
+        if(seed.last_build && progEl){
+          progEl.style.display = 'block';
+          progEl.textContent = (seed.last_build.ok ? '✓ ' : '⚠️ ') + seed.last_build.message;
+        }
+        let isUpdated = git.remote_sha && git.local_commit.startsWith(git.remote_sha);
+        if(badgeEl){
+          if(isUpdated){
+            badgeEl.textContent = 'terbaru (up to date)';
+            badgeEl.className = 'badge b-run';
+          } else if(git.remote_sha) {
+            badgeEl.textContent = 'tersedia update';
+            badgeEl.className = 'badge b-err';
+          } else {
+            badgeEl.textContent = 'ready';
+            badgeEl.className = 'badge b-run';
+          }
+        }
+      }
+    } catch(e){}
+  }
+  checkStatus();
+})();
+</script>
+
+
+<!-- Audit Trail Viewer untuk Admin -->
+<details class="card" style="margin-top:18px">
+  <summary class="logsum"><b>🛡️ Riwayat Aktivitas &amp; Audit Trail</b> <span class="kv" style="font-size:12px">({{ audits|length }} aktivitas terakhir · Waktu Makassar WITA UTC+8)</span></summary>
+  <div class="tablewrap" style="margin-top:14px">
+    <table>
+      <thead>
+        <tr><th>Waktu (WITA)</th><th>Aktor</th><th>Aksi</th><th>Rincian</th></tr>
+      </thead>
+      <tbody>
+        {% for a in audits %}
+        <tr>
+          <td class="mono" style="font-size:12px;white-space:nowrap">{{ a.ts }}</td>
+          <td><b>{{ a.actor }}</b></td>
+          <td><span class="badge" style="font-size:11px">{{ a.action }}</span></td>
+          <td class="mono" style="font-size:12px;color:var(--dim)">{{ a.detail }}</td>
+        </tr>
+        {% endfor %}
+        {% if not audits %}<tr><td colspan="4" class="empty">Belum ada catatan audit.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% else %}
+<div class="card">
+  <h2>Instance Saya</h2>
+  {% for i in instances %}
+  <div class="inst-row" style="padding:16px 4px">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <a class="slug" href="{{ url_for('instance_page',slug=i.slug) if not i.expiry.is_expired else '#' }}" style="font-size:16px;font-weight:700">{{i.slug}}</a>
+        {% if i.expiry.is_expired %}
+          <span class="badge b-err" style="font-size:11px">Langganan Habis</span>
+        {% elif i.expiry.warning %}
+          <span class="badge b-part" style="font-size:11px">Mendekati Habis</span>
+        {% else %}
+          <span class="badge b-run" style="font-size:11px">Aktif</span>
+        {% endif %}
+      </div>
+      <div class="kv" style="font-size:13px;margin-top:4px">
+        Masa Berlangganan: <b style="color:{{ 'var(--err)' if i.expiry.is_expired else ('var(--warn)' if i.expiry.warning else 'var(--tx)') }}">{{ i.expiry.label }}</b>
+      </div>
+    </div>
+    <div class="inst-side">
+      <span class="badge b-{{'run' if i.status=='running' else 'stop'}}">{{i.status}}</span>
+      {% if i.expiry.is_expired %}
+        <button class="ghost" disabled style="opacity:.5;cursor:not-allowed">Terkunci (Expired)</button>
+      {% else %}
+        <a class="btn-primary" href="{{url_for('instance_page',slug=i.slug)}}" style="padding:6px 14px;font-size:13px;border-radius:8px">Kelola Workspace →</a>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p class="empty">Belum ada instance yang dialokasikan untuk akun Anda. Hubungi administrator.</p>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+

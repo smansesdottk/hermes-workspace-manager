@@ -1,0 +1,1027 @@
+{% extends "base.html" %}
+{% block body %}
+<!-- Hero Section -->
+<section class="landing-hero">
+  <div class="hero-badge"><i>●</i> Platform AI Workspace Pribadi</div>
+  <h1 class="hero-title">Asisten Cerdas Hermes &amp; AI Router,<br><span class="hero-gradient">Terisolasi Sepenuhnya untuk Anda</span></h1>
+  <p class="hero-desc">
+    MyHermes memberikan setiap pengguna container pribadi terdedikasi yang menjalankan <b>Hermes Agent</b> dan <b>9Router</b>. Terintegrasi langsung dengan Telegram dan WhatsApp tanpa perlu konfigurasi rumit di server.
+  </p>
+  <div class="hero-cta-row">
+    <a class="btn-primary" href="{{ url_for('login') }}">Buka Panel Workspace →</a>
+    <a class="btn-secondary" href="#keunggulan">Pelajari Keunggulan</a>
+  </div>
+</section>
+
+<!-- Showcase Section: Dual-Pane Dashboard + Live Mobile Phone Simulation -->
+<!-- Showcase Section: Dual-Tab Interactive Simulation (Tab 1: Chat WA/Telegram, Tab 2: Dashboard Simulation) -->
+<section class="showcase-section" id="tampilan">
+  <div style="text-align:center;max-width:760px;margin:0 auto 28px">
+    <div class="section-tag">SIMULASI INTERAKTIF LIVE</div>
+    <h2 class="section-title" style="font-size:32px;margin-bottom:10px">Pengalaman Nyata Menggunakan MyHermes</h2>
+    <p class="section-subtitle" style="margin:auto">
+      Pilih tab di bawah untuk melihat kemudahan interaksi asisten via WhatsApp & Telegram atau simulasi pengelolaan workspace di dashboard.
+    </p>
+  </div>
+
+  <!-- Browser-Style Navigation Tab Bar -->
+  <div style="display:flex;justify-content:center;margin-bottom:20px">
+    <div style="background:rgba(255,255,255,.03);border:1px solid var(--line2);padding:4px;border-radius:12px;display:inline-flex;gap:4px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+      <button type="button" id="tab-btn-chat" onclick="switchShowcaseTab('chat')" class="nav-tab-item active" style="border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;background:rgba(94,106,210,.25);color:#fff;border:1px solid rgba(94,106,210,.4)">
+        <span>📱</span> <b>Simulasi Chat WA &amp; Telegram</b>
+      </button>
+      <button type="button" id="tab-btn-dash" onclick="switchShowcaseTab('dash')" class="nav-tab-item" style="border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;background:transparent;color:var(--dim);border:1px solid transparent">
+        <span>📊</span> <b>Simulasi Penggunaan Dashboard</b>
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 1 CONTENT: Simulasi Percakapan HP (WhatsApp & Telegram Berdampingan di PC / Bersusun di HP) -->
+  <div id="showcase-tab-chat">
+    <div style="background:rgba(15,23,42,.6);border:1px solid var(--line2);border-radius:16px;padding:24px 20px;box-shadow:0 20px 50px rgba(0,0,0,.6)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--line)">
+        <div>
+          <h3 style="margin:0;font-size:16px;color:#fff">💬 Komunikasi Mandiri dengan Hermes Agent</h3>
+          <p class="kv" style="font-size:12px;margin:3px 0 0">Simulasi 3 putaran percakapan tugas nyata yang tidak bisa dikerjakan chat AI biasa.</p>
+        </div>
+        <span class="badge" id="chat-sim-cycle-badge" style="font-size:11px;background:rgba(16,185,129,.1);color:#34d399;border-color:rgba(16,185,129,.25)">Putaran 1/5</span>
+      </div>
+
+      <div class="phone-grid-layout">
+        <!-- Mockup HP 1: WhatsApp Chat -->
+        <div style="background:#0b141a;border:2px solid #222d34;border-radius:24px;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.6);display:flex;flex-direction:column;min-height:480px">
+          <div style="background:#1f2c34;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.06)">
+            <div style="width:30px;height:30px;border-radius:50%;background:#00a884;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">M</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:600;color:#e9edef;white-space:nowrap">WhatsApp (Self-Chat)</div>
+              <div style="font-size:10px;color:#8696a0">online (Hermes Assistant)</div>
+            </div>
+            <span class="badge b-run" style="font-size:10px;padding:2px 8px">WA</span>
+          </div>
+
+          <div style="flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;background:radial-gradient(circle at center, rgba(17,27,33,.8), #0b141a)" id="tab-wa-scroll">
+            <div class="chat-msg chat-user" id="tab-wa-u1" style="display:none;align-self:flex-end">
+              <div style="background:#005c4b;color:#e9edef;padding:7px 11px;border-radius:8px;font-size:12px;max-width:92%;line-height:1.4">
+                Ingatkan saya follow up vendor jam 15:00 WITA dan cari harga tiket promo ke Jakarta
+              </div>
+            </div>
+            <div class="chat-msg chat-bot" id="tab-wa-b1" style="display:none;align-self:flex-start">
+              <div style="background:#202c33;color:#e9edef;padding:8px 12px;border-radius:8px;font-size:12px;max-width:95%;line-height:1.4;border:1px solid rgba(255,255,255,.05)">
+                ✅ <b>Pengingat Aktif:</b> Jadwal jam 15:00 WITA berhasil dicatat.<br>
+                ✈️ <b>Hasil Cek Web:</b> Tiket promo Jakarta termurah mulai Rp 850rb (Lion/Super Air Jet).
+              </div>
+            </div>
+
+            <div class="chat-msg chat-user" id="tab-wa-u2" style="display:none;align-self:flex-end">
+              <div style="background:#005c4b;color:#e9edef;padding:7px 11px;border-radius:8px;font-size:12px;max-width:92%;line-height:1.4">
+                Rangkumkan notulen rapat dari catatan singkat ini: [Budget disetujui 50jt, deadline minggu depan, PIC: Alex]
+              </div>
+            </div>
+            <div class="chat-msg chat-bot" id="tab-wa-b2" style="display:none;align-self:flex-start">
+              <div style="background:#202c33;color:#e9edef;padding:8px 12px;border-radius:8px;font-size:12px;max-width:95%;line-height:1.4;border:1px solid rgba(255,255,255,.05)">
+                📋 <b>Notulen Rapat Resmi:</b><br>
+                • Anggaran: Rp 50.000.000 (Approved)<br>
+                • Target Selesai: Minggu Depan<br>
+                • Penanggung Jawab: Alex
+              </div>
+            </div>
+
+            <div class="chat-msg chat-user" id="tab-wa-u3" style="display:none;align-self:flex-end">
+              <div style="background:#005c4b;color:#e9edef;padding:7px 11px;border-radius:8px;font-size:12px;max-width:92%;line-height:1.4">
+                Kirimkan draft email konfirmasi ke direktur berdasarkan notulen di atas
+              </div>
+            </div>
+            <div class="chat-msg chat-bot" id="tab-wa-b3" style="display:none;align-self:flex-start">
+              <div style="background:#202c33;color:#e9edef;padding:8px 12px;border-radius:8px;font-size:12px;max-width:95%;line-height:1.4;border:1px solid rgba(255,255,255,.05)">
+                ✉️ <b>Draft Siap:</b> Subjek: Laporan Anggaran &amp; Timeline Proyek.<br>
+                <i>"Yth. Direktur, bersama ini kami konfirmasikan alokasi 50jt dengan target tuntas minggu depan..."</i>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#1f2c34;padding:8px 10px;display:flex;align-items:center;gap:6px">
+            <div style="flex:1;background:#2a3942;border-radius:14px;padding:6px 12px;font-size:11.5px;color:#8696a0" id="tab-wa-input">Ketik pesan...</div>
+            <div style="width:26px;height:26px;border-radius:50%;background:#00a884;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">➤</div>
+          </div>
+        </div>
+
+        <!-- Mockup HP 2: Telegram Bot -->
+        <div style="background:#17212b;border:2px solid #242f3d;border-radius:24px;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.6);display:flex;flex-direction:column;min-height:480px">
+          <div style="background:#242f3d;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.06)">
+            <div style="width:30px;height:30px;border-radius:50%;background:#2aabee;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">🤖</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:600;color:#f5f5f5;white-space:nowrap">Telegram Bot</div>
+              <div style="font-size:10px;color:#708499">@AlexPersonalBot</div>
+            </div>
+            <span class="badge" style="font-size:10px;padding:2px 8px;background:rgba(42,171,238,.15);color:#22d3ee;border-color:rgba(42,171,238,.3)">TG</span>
+          </div>
+
+          <div style="flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;background:#0e1621" id="tab-tg-scroll">
+            <div class="chat-msg chat-user" id="tab-tg-u1" style="display:none;align-self:flex-end">
+              <div style="background:#2b5278;color:#fff;padding:7px 11px;border-radius:8px;font-size:12px;max-width:92%;line-height:1.4">
+                Cek kondisi container Docker di server dan berikan ringkasannya
+              </div>
+            </div>
+            <div class="chat-msg chat-bot" id="tab-tg-b1" style="display:none;align-self:flex-start">
+              <div style="background:#182533;color:#f5f5f5;padding:8px 12px;border-radius:8px;font-size:12px;max-width:95%;line-height:1.4;border:1px solid rgba(255,255,255,.05)">
+                ⚙️ <b>Eksekusi Shell CLI:</b><br>
+                <code>docker ps: 3 running (hermes, 9router, db)</code><br>
+                Semua service aktif dan beroperasi normal.
+              </div>
+            </div>
+
+            <div class="chat-msg chat-user" id="tab-tg-u2" style="display:none;align-self:flex-end">
+              <div style="background:#2b5278;color:#fff;padding:7px 11px;border-radius:8px;font-size:12px;max-width:92%;line-height:1.4">
+                Buatkan skrip Python untuk parsing file log error dan ekstrak IP penyerang
+              </div>
+            </div>
+            <div class="chat-msg chat-bot" id="tab-tg-b2" style="display:none;align-self:flex-start">
+              <div style="background:#182533;color:#f5f5f5;padding:8px 12px;border-radius:8px;font-size:12px;max-width:95%;line-height:1.4;border:1px solid rgba(255,255,255,.05)">
+                🐍 <b>Skrip Python Dibuat &amp; Diuji:</b><br>
+                Ditemukan 14 IP mencurigakan (top: <code>198.51.100.24</code> - 420 req). Kode disimpan di <code>parse_logs.py</code>.
+              </div>
+            </div>
+
+            <div class="chat-msg chat-user" id="tab-tg-u3" style="display:none;align-self:flex-end">
+              <div style="background:#2b5278;color:#fff;padding:7px 11px;border-radius:8px;font-size:12px;max-width:92%;line-height:1.4">
+                Jadwalkan cron job harian agar skrip itu otomatis kirim alert ke Telegram ini setiap jam 08:00
+              </div>
+            </div>
+            <div class="chat-msg chat-bot" id="tab-tg-b3" style="display:none;align-self:flex-start">
+              <div style="background:#182533;color:#f5f5f5;padding:8px 12px;border-radius:8px;font-size:12px;max-width:95%;line-height:1.4;border:1px solid rgba(255,255,255,.05)">
+                ⏰ <b>Cron Job Tersimpan:</b><br>
+                <code>0 8 * * * /opt/hermes/scripts/parse_logs.py</code><br>
+                Laporan otomatis akan dikirim ke chat Telegram ini setiap pagi!
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#242f3d;padding:8px 10px;display:flex;align-items:center;gap:6px">
+            <div style="flex:1;background:#17212b;border-radius:14px;padding:6px 12px;font-size:11.5px;color:#708499" id="tab-tg-input">Ketik pesan...</div>
+            <div style="width:26px;height:26px;border-radius:50%;background:#2aabee;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">➤</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2 CONTENT: Simulasi Penggunaan Dashboard User (Dengan Banner Penjelasan Mencolok) -->
+  <div id="showcase-tab-dash" style="display:none">
+    
+    <!-- Banner Penjelasan Menonjol di Atas Jendela Dashboard -->
+    <div id="dash-sim-banner" style="background:linear-gradient(135deg,rgba(94,106,210,.25),rgba(34,211,238,.15));border:1.5px solid var(--acc2);border-radius:14px;padding:16px 20px;margin-bottom:18px;box-shadow:0 8px 24px rgba(94,106,210,.25);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:24px" id="dash-sim-icon">⚡</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--cyan);text-transform:uppercase" id="dash-sim-step-label">TAHAP 1: PEMILIHAN MODEL</div>
+          <div style="font-size:15px;font-weight:700;color:#fff;margin-top:2px" id="dash-sim-title">Memilih Model Pintar (1-Klik GUI)</div>
+          <div style="font-size:13px;color:#cbd5e1;margin-top:2px" id="dash-sim-desc">Pengguna memilih model qd/qmodel_38max secara instan dari katalog 690+ model 9Router.</div>
+        </div>
+      </div>
+      <div class="badge" id="dash-sim-cycle-badge" style="font-size:12px;padding:4px 12px;background:rgba(0,0,0,.4);border-color:var(--line2);color:#fff">
+        Putaran 1/5
+      </div>
+    </div>
+
+    <!-- Jendela Dashboard Mockup -->
+    <div class="mockup-window" id="dash-sim-window" style="box-shadow:0 16px 45px rgba(0,0,0,.7);position:relative">
+      <!-- Kursor virtual: posisinya dihitung ulang dari elemen aktif setelah setiap perubahan tinggi layout -->
+      <div id="dash-sim-cursor" aria-hidden="true" style="position:absolute;z-index:50;width:24px;height:24px;pointer-events:none;transition:transform .7s cubic-bezier(.25,1,.5,1),opacity .25s;transform:translate(-50px,-50px);filter:drop-shadow(0 3px 5px rgba(0,0,0,.65))">
+        <svg viewBox="0 0 24 24" style="width:100%;height:100%"><path fill="#ffffff" stroke="#1e293b" stroke-width="1.4" d="M3 2.5l7.2 18.2 2.7-7 7-2.7L3 2.5z"/><path fill="#6366f1" d="M12 14.8l1.1 2.8 2.5-2.5z"/></svg>
+      </div>
+      <div class="window-header" style="padding:12px 18px">
+        <div class="window-dots"><span></span><span></span><span></span></div>
+        <div class="window-address">https://hermesku.my.id/i/alex-workspace</div>
+        <div class="window-badge"><span class="badge b-run" style="font-size:11px">online</span></div>
+      </div>
+
+      <div style="padding:12px 20px 0;background:rgba(255,255,255,.015);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)">
+        <div class="nav-tabs-bar" style="margin-bottom:-1px;border-bottom:none;gap:6px">
+          <span class="nav-tab-item active" id="sim-d-tab-main" style="cursor:default">📊 Dasbor Utama</span>
+          <span class="nav-tab-item" id="sim-d-tab-sett" style="cursor:default">⚙️ Menu Setting</span>
+        </div>
+        <div class="kv" style="font-size:12px">Workspace: <b>alex-workspace</b></div>
+      </div>
+
+      <div class="mockup-body" style="padding:22px;position:relative">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div>
+            <h3 style="margin:0;font-size:18px">alex-workspace</h3>
+            <p class="kv" style="font-size:12.5px;margin:2px 0 0">Hermes Agent + 9Router pribadi terisolasi</p>
+          </div>
+          <span class="badge b-run">running</span>
+        </div>
+
+        <div class="mockup-grid">
+          <!-- Card Akses Layanan & Kapasitas -->
+          <div class="mock-card">
+            <div class="mock-card-title">AKSES LAYANAN</div>
+            <div class="mock-links">
+              <span class="mock-link">Buka Hermes Web UI ↗</span>
+              <span class="mock-link">Buka 9Router Dashboard ↗</span>
+            </div>
+            <div class="mock-actions">
+              <span class="mock-btn mock-btn-blue">Start</span>
+              <span class="mock-btn mock-btn-warn">Restart</span>
+              <span class="mock-btn mock-btn-danger">Stop</span>
+            </div>
+          </div>
+
+          <div class="mock-card">
+            <div class="mock-card-title">KAPASITAS INSTANCE</div>
+            <div class="mock-table">
+              <div class="mock-tr mock-th"><span>Layanan</span><span>CPU</span><span>Memori</span></div>
+              <div class="mock-tr"><span>Hermes Agent</span><span class="text-green" id="sim-d-cpu">0.38%</span><span>420 MB / 1.5 GB</span></div>
+              <div class="mock-tr"><span>9Router Gateway</span><span class="text-green">0.02%</span><span>64 MB / 700 MB</span></div>
+              <div class="mock-tr"><span>Storage Data</span><span colspan="2">450 MB (Batas: 8 GB)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model Card -->
+        <div class="mock-card" id="sim-d-model-card" style="margin-top:14px;transition:all .3s">
+          <div class="mock-card-title">MODEL AI AKTIF</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div>
+              <b class="mono" id="sim-d-active-model" style="font-size:14px;color:var(--acc2)">qd/qmodel_38max</b>
+              <div class="kv" style="font-size:11.5px;margin-top:2px">Provider: 9Router AI Gateway</div>
+            </div>
+            <span class="mock-btn mock-btn-blue" id="sim-d-btn-model">⚡ Pilih Model Cepat</span>
+          </div>
+          <div id="sim-d-model-popup" hidden style="margin-top:10px;padding:10px;background:rgba(0,0,0,.6);border:1px solid var(--line2);border-radius:6px;font-size:12px">
+            <span class="badge b-run">✓ Model qd/qmodel_38max berhasil diterapkan ke config.yaml!</span>
+          </div>
+        </div>
+
+        <!-- Channels Grid -->
+        <div class="mock-card" id="sim-d-channel-card" style="margin-top:14px;transition:all .3s">
+          <div class="mock-card-title">HUBUNGKAN CHANNEL PESAN</div>
+          <div class="mock-grid-ch">
+            <div class="mock-channel" id="sim-d-tg-box">
+              <div class="ch-top"><b>Telegram Bot</b><span class="badge b-stop" id="sim-d-tg-badge">disconnected</span></div>
+              <p class="ch-desc" id="sim-d-tg-desc">Belum terhubung</p>
+              <div style="margin-top:8px"><span class="mock-btn mock-btn-blue" style="font-size:11px;padding:3px 8px">Hubungkan QR</span></div>
+            </div>
+
+            <div class="mock-channel" id="sim-d-wa-box">
+              <div class="ch-top"><b>WhatsApp Gateway</b><span class="badge b-stop" id="sim-d-wa-badge">disconnected</span></div>
+              <p class="ch-desc" id="sim-d-wa-desc">Belum terhubung</p>
+              <div style="margin-top:8px"><span class="mock-btn mock-btn-blue" style="font-size:11px;padding:3px 8px">Pindai QR WA</span></div>
+            </div>
+          </div>
+
+          <!-- Channel QR Popup Simulation -->
+          <div id="sim-d-qr-popup" hidden style="margin-top:12px;padding:14px;background:rgba(0,0,0,.7);border:1px solid var(--line2);border-radius:8px;text-align:center">
+            <div style="font-size:12px;color:var(--dim);margin-bottom:6px" id="sim-d-qr-title">Pindai dari WhatsApp HP (Perangkat Tertaut)</div>
+            <div style="background:#fff;width:80px;height:80px;margin:auto;padding:6px;border-radius:6px">
+              <svg viewBox="0 0 33 33" style="width:100%;height:100%"><path fill="#000" d="M0 0h11v11H0zM4 4h3v3H4zM22 0h11v11H22zM26 4h3v3h-3zM0 22h11v11H0zM4 26h3v3H4zM13 3h2v4h-2zM17 1h2v3h-2zM13 8h4v2h-4zM20 7h2v5h-2zM7 13h2v4H7zM3 17h4v2H3zM10 18h2v3h-2zM14 13h3v3h-3zM18 14h4v2h-4zM13 18h2v5h-2zM16 18h3v2h-3zM20 18h2v2h-2zM17 21h3v3h-3zM22 14h2v3h-2zM25 13h3v2h-3zM29 14h2v3h-2zM23 18h4v2h-4zM28 18h3v4h-3zM23 21h2v5h-2zM26 23h3v2h-3zM23 27h3v4h-3zM27 27h4v2h-4zM14 24h2v4h-2zM17 25h3v2h-3zM18 28h4v3h-4zM10 24h2v4h-2zM6 24h3v2H6z"/></svg>
+            </div>
+            <span class="badge b-run" id="sim-d-qr-status" style="font-size:11px;margin-top:6px">Menghubungkan…</span>
+          </div>
+        </div>
+
+        <!-- In-Dashboard Test Chat -->
+        <div class="mock-card" id="sim-d-chat-card" style="margin-top:14px;transition:all .3s">
+          <div class="mock-card-title">💬 TEST CHAT MODEL AKTIF (IN-DASHBOARD)</div>
+          <div style="background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:8px;padding:12px;min-height:90px;font-size:12.5px;display:flex;flex-direction:column;gap:8px">
+            <div id="sim-d-chat-u" style="display:none;color:#c7caff;align-self:flex-end"><b>Anda:</b> Halo, apakah model qd/qmodel_38max sudah aktif?</div>
+            <div id="sim-d-chat-b" style="display:none;color:var(--tx);align-self:flex-start"><b>Asisten AI:</b> Ya! Model <code>qd/qmodel_38max</code> aktif dan siap merespon via Web, Telegram, dan WhatsApp.</div>
+          </div>
+        </div>
+
+        <!-- Settings Tab View Simulation -->
+        <div id="sim-d-settings-view" hidden style="margin-top:14px;background:rgba(255,255,255,.02);border:1px solid var(--line2);border-radius:10px;padding:16px">
+          <div class="mock-card-title">⚙️ MENU SETTING (SOUL.MD, KREDENSIAL, &amp; BACKUP)</div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:6px">Persona SOUL.md: Mengatur karakter dan gaya komunikasi asisten Anda.</div>
+          <div style="background:rgba(0,0,0,.5);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#c7caff;margin-bottom:12px">
+            "Kamu adalah asisten otonom yang ramah, ringkas, dan fokus mengeksekusi tugas nyata."
+          </div>
+          <div style="display:flex;gap:8px">
+            <span class="mock-btn mock-btn-blue">📥 Download Backup (.tar.gz)</span>
+            <span class="mock-btn" style="background:var(--panel2);border:1px solid var(--line)">📤 Restore Data</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SCRIPT PENGATUR TAB & DUA SIMULASI INDEPENDEN -->
+<script>
+let currentActiveShowcaseTab = 'chat';
+
+function switchShowcaseTab(tab){
+  currentActiveShowcaseTab = tab;
+  const tabChat = document.getElementById('showcase-tab-chat');
+  const tabDash = document.getElementById('showcase-tab-dash');
+  const btnChat = document.getElementById('tab-btn-chat');
+  const btnDash = document.getElementById('tab-btn-dash');
+
+  if(tab === 'chat'){
+    if(tabChat) tabChat.style.display = 'block';
+    if(tabDash) tabDash.style.display = 'none';
+    btnChat.style.background = 'rgba(94,106,210,.25)';
+    btnChat.style.color = '#fff';
+    btnChat.style.borderColor = 'rgba(94,106,210,.4)';
+    btnDash.style.background = 'transparent';
+    btnDash.style.color = 'var(--dim)';
+    btnDash.style.borderColor = 'transparent';
+  } else {
+    if(tabChat) tabChat.style.display = 'none';
+    if(tabDash) tabDash.style.display = 'block';
+    btnDash.style.background = 'rgba(94,106,210,.25)';
+    btnDash.style.color = '#fff';
+    btnDash.style.borderColor = 'rgba(94,106,210,.4)';
+    btnChat.style.background = 'transparent';
+    btnChat.style.color = 'var(--dim)';
+    btnChat.style.borderColor = 'transparent';
+  }
+}
+
+// ==========================================
+// 1. SIMULASI INDEPENDEN TAB 1 (CHAT WA & TG)
+// ==========================================
+(function initChatSimulation(){
+  const waU1 = document.getElementById('tab-wa-u1'), waB1 = document.getElementById('tab-wa-b1');
+  const waU2 = document.getElementById('tab-wa-u2'), waB2 = document.getElementById('tab-wa-b2');
+  const waU3 = document.getElementById('tab-wa-u3'), waB3 = document.getElementById('tab-wa-b3');
+  const waInput = document.getElementById('tab-wa-input'), waScroll = document.getElementById('tab-wa-scroll');
+
+  const tgU1 = document.getElementById('tab-tg-u1'), tgB1 = document.getElementById('tab-tg-b1');
+  const tgU2 = document.getElementById('tab-tg-u2'), tgB2 = document.getElementById('tab-tg-b2');
+  const tgU3 = document.getElementById('tab-tg-u3'), tgB3 = document.getElementById('tab-tg-b3');
+  const tgInput = document.getElementById('tab-tg-input'), tgScroll = document.getElementById('tab-tg-scroll');
+
+  const cycleBadge = document.getElementById('chat-sim-cycle-badge');
+  let chatCycle = 0;
+  const maxChatCycles = 5;
+
+  function runChatLoop(){
+    if(chatCycle >= maxChatCycles){
+      if(cycleBadge) cycleBadge.textContent = '✨ Simulasi Chat Selesai (5 Putaran)';
+      return;
+    }
+    chatCycle++;
+    if(cycleBadge) cycleBadge.textContent = `Putaran ${chatCycle}/${maxChatCycles}`;
+
+    // Reset Elements
+    [waU1, waB1, waU2, waB2, waU3, waB3, tgU1, tgB1, tgU2, tgB2, tgU3, tgB3].forEach(el => { if(el) el.style.display = 'none'; });
+    if(waInput) waInput.textContent = 'Ketik pesan...';
+    if(tgInput) tgInput.textContent = 'Ketik pesan...';
+
+    // WA Turn 1
+    setTimeout(() => {
+      if(waInput) waInput.textContent = 'Ingatkan follow up vendor jam 15:00... ';
+      setTimeout(() => {
+        if(waInput) waInput.textContent = 'Ketik pesan...';
+        if(waU1) waU1.style.display = 'flex';
+        setTimeout(() => {
+          if(waB1) waB1.style.display = 'flex';
+          if(waScroll) waScroll.scrollTop = waScroll.scrollHeight;
+
+          // TG Turn 1
+          setTimeout(() => {
+            if(tgInput) tgInput.textContent = 'Cek kondisi container Docker... ';
+            setTimeout(() => {
+              if(tgInput) tgInput.textContent = 'Ketik pesan...';
+              if(tgU1) tgU1.style.display = 'flex';
+              setTimeout(() => {
+                if(tgB1) tgB1.style.display = 'flex';
+                if(tgScroll) tgScroll.scrollTop = tgScroll.scrollHeight;
+
+                // WA Turn 2
+                setTimeout(() => {
+                  if(waU2) waU2.style.display = 'flex';
+                  setTimeout(() => {
+                    if(waB2) waB2.style.display = 'flex';
+                    if(waScroll) waScroll.scrollTop = waScroll.scrollHeight;
+
+                    // TG Turn 2
+                    setTimeout(() => {
+                      if(tgU2) tgU2.style.display = 'flex';
+                      setTimeout(() => {
+                        if(tgB2) tgB2.style.display = 'flex';
+                        if(tgScroll) tgScroll.scrollTop = tgScroll.scrollHeight;
+
+                        // WA Turn 3
+                        setTimeout(() => {
+                          if(waU3) waU3.style.display = 'flex';
+                          setTimeout(() => {
+                            if(waB3) waB3.style.display = 'flex';
+                            if(waScroll) waScroll.scrollTop = waScroll.scrollHeight;
+
+                            // TG Turn 3
+                            setTimeout(() => {
+                              if(tgU3) tgU3.style.display = 'flex';
+                              setTimeout(() => {
+                                if(tgB3) tgB3.style.display = 'flex';
+                                if(tgScroll) tgScroll.scrollTop = tgScroll.scrollHeight;
+
+                                setTimeout(runChatLoop, 4500);
+                              }, 1100);
+                            }, 1600);
+                          }, 1100);
+                        }, 1600);
+                      }, 1100);
+                    }, 1600);
+                  }, 1100);
+                }, 1600);
+              }, 1100);
+            }, 700);
+          }, 1600);
+        }, 1100);
+      }, 700);
+    }, 600);
+  }
+
+  if(document.readyState === 'complete') runChatLoop();
+  else window.addEventListener('load', runChatLoop);
+})();
+
+
+// ==========================================
+// 2. SIMULASI INDEPENDEN TAB 2 (DASHBOARD USER)
+// ==========================================
+(function initDashboardSimulation(){
+  const icon = document.getElementById('dash-sim-icon');
+  const stepLabel = document.getElementById('dash-sim-step-label');
+  const title = document.getElementById('dash-sim-title');
+  const desc = document.getElementById('dash-sim-desc');
+  const cycleBadge = document.getElementById('dash-sim-cycle-badge');
+
+  const modelLabel = document.getElementById('sim-d-active-model');
+  const modelPopup = document.getElementById('sim-d-model-popup');
+  const tgBadge = document.getElementById('sim-d-tg-badge');
+  const tgDesc = document.getElementById('sim-d-tg-desc');
+  const waBadge = document.getElementById('sim-d-wa-badge');
+  const waDesc = document.getElementById('sim-d-wa-desc');
+  const qrPopup = document.getElementById('sim-d-qr-popup');
+  const qrTitle = document.getElementById('sim-d-qr-title');
+  const qrStatus = document.getElementById('sim-d-qr-status');
+
+  const chatU = document.getElementById('sim-d-chat-u');
+  const chatB = document.getElementById('sim-d-chat-b');
+  const tabMain = document.getElementById('sim-d-tab-main');
+  const tabSett = document.getElementById('sim-d-tab-sett');
+  const settView = document.getElementById('sim-d-settings-view');
+  const dashboardWindow = document.getElementById('dash-sim-window');
+  const cursor = document.getElementById('dash-sim-cursor');
+  const modelButton = document.getElementById('sim-d-btn-model');
+  const telegramBox = document.getElementById('sim-d-tg-box');
+  const whatsappBox = document.getElementById('sim-d-wa-box');
+  const chatCard = document.getElementById('sim-d-chat-card');
+
+  // Posisi kursor dihitung dari bounding-box CURRENT setelah DOM berubah.
+  // Ini menjaga kursor selalu tepat di elemen meski QR/settings menambah tinggi jendela.
+  function moveDashboardCursor(target){
+    if(!cursor || !dashboardWindow || !target) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const parent = dashboardWindow.getBoundingClientRect();
+      const rect = target.getBoundingClientRect();
+      const x = rect.left - parent.left + Math.min(rect.width * .55, rect.width - 12);
+      const y = rect.top - parent.top + Math.min(rect.height * .5, rect.height - 12);
+      cursor.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+      cursor.style.opacity = '1';
+    }));
+  }
+
+  function clickPulse(target){
+    if(!target) return;
+    target.style.transition = 'transform .16s ease, box-shadow .16s ease';
+    target.style.transform = 'scale(.97)';
+    target.style.boxShadow = '0 0 0 2px rgba(130,143,255,.65)';
+    setTimeout(() => { target.style.transform = ''; target.style.boxShadow = ''; }, 220);
+  }
+
+  let dashCycle = 0;
+  const maxDashCycles = 5;
+
+  function runDashboardLoop(){
+    if(dashCycle >= maxDashCycles){
+      if(title) title.textContent = '✨ Simulasi Dashboard Selesai (5 Putaran)';
+      return;
+    }
+    dashCycle++;
+    if(cycleBadge) cycleBadge.textContent = `Putaran ${dashCycle}/${maxDashCycles}`;
+
+    // Reset Dashboard State
+    if(tabMain) tabMain.className = 'nav-tab-item active';
+    if(tabSett) tabSett.className = 'nav-tab-item';
+    if(settView) settView.hidden = true;
+    if(modelPopup) modelPopup.hidden = true;
+    if(qrPopup) qrPopup.hidden = true;
+    if(chatU) chatU.style.display = 'none';
+    if(chatB) chatB.style.display = 'none';
+
+    if(tgBadge) { tgBadge.textContent = 'disconnected'; tgBadge.className = 'badge b-stop'; }
+    if(tgDesc) tgDesc.textContent = 'Belum terhubung';
+    if(waBadge) { waBadge.textContent = 'disconnected'; waBadge.className = 'badge b-stop'; }
+    if(waDesc) waDesc.textContent = 'Belum terhubung';
+    if(modelLabel) { modelLabel.textContent = 'oc/muse-spark-1.2 (free)'; modelLabel.style.color = 'var(--dim)'; }
+
+    // === TAHAP 1: GANTI MODEL ===
+    moveDashboardCursor(modelButton);
+    if(icon) icon.textContent = '⚡';
+    if(stepLabel) stepLabel.textContent = 'TAHAP 1: PEMILIHAN MODEL';
+    if(title) title.textContent = 'Memilih Model AI Cepat (1-Klik GUI)';
+    if(desc) desc.textContent = 'Pengguna memilih model pintar qd/qmodel_38max secara instan dari katalog tanpa perlu terminal.';
+
+    setTimeout(() => {
+      clickPulse(modelButton);
+      if(modelPopup) modelPopup.hidden = false;
+      if(modelLabel) { modelLabel.textContent = 'qd/qmodel_38max'; modelLabel.style.color = 'var(--ok)'; }
+
+      // === TAHAP 2: HUBUNGKAN TELEGRAM ===
+      setTimeout(() => {
+        if(modelPopup) modelPopup.hidden = true;
+        moveDashboardCursor(telegramBox);
+        if(icon) icon.textContent = '✈️';
+        if(stepLabel) stepLabel.textContent = 'TAHAP 2: INTEGRASI TELEGRAM';
+        if(title) title.textContent = 'Menghubungkan Bot Telegram via QR';
+        if(desc) desc.textContent = 'Pindai QR langsung dari aplikasi Telegram, bot langsung aktif tanpa repot setup server.';
+
+        if(qrPopup) {
+          clickPulse(telegramBox);
+          qrTitle.textContent = 'Pindai QR dari Aplikasi Telegram';
+          qrStatus.textContent = 'Menghubungkan @AlexPersonalBot…';
+          qrPopup.hidden = false;
+          moveDashboardCursor(qrPopup);
+        }
+
+        setTimeout(() => {
+          if(qrPopup) qrPopup.hidden = true;
+          if(tgBadge) { tgBadge.textContent = 'connected'; tgBadge.className = 'badge b-run'; }
+          if(tgDesc) tgDesc.textContent = '@AlexPersonalBot';
+
+          // === TAHAP 3: HUBUNGKAN WHATSAPP ===
+          setTimeout(() => {
+            moveDashboardCursor(whatsappBox);
+            if(icon) icon.textContent = '📱';
+            if(stepLabel) stepLabel.textContent = 'TAHAP 3: INTEGRASI WHATSAPP';
+            if(title) title.textContent = 'Pindai QR WhatsApp (Perangkat Tertaut)';
+            if(desc) desc.textContent = 'Buka WA di HP &gt; Perangkat Tertaut &gt; Tautkan Perangkat (Mode Self-Chat / Bot).';
+
+            if(qrPopup) {
+              clickPulse(whatsappBox);
+              qrTitle.textContent = 'Pindai dari WhatsApp HP (Perangkat Tertaut)';
+              qrStatus.textContent = 'Menghubungkan WhatsApp Self-Chat…';
+              qrPopup.hidden = false;
+              moveDashboardCursor(qrPopup);
+            }
+
+            setTimeout(() => {
+              if(qrPopup) qrPopup.hidden = true;
+              if(waBadge) { waBadge.textContent = 'connected'; waBadge.className = 'badge b-run'; }
+              if(waDesc) waDesc.textContent = 'Mode: Self-Chat (Pesan Pribadi)';
+
+              // === TAHAP 4: TEST CHAT ===
+              setTimeout(() => {
+                moveDashboardCursor(chatCard);
+                if(icon) icon.textContent = '💬';
+                if(stepLabel) stepLabel.textContent = 'TAHAP 4: TEST CHAT MODEL';
+                if(title) title.textContent = 'Uji Coba Respon Model di Dashboard';
+                if(desc) desc.textContent = 'Memastikan respon model dan memori percakapan berjalan lancar sebelum digunakan di HP.';
+                if(chatU) chatU.style.display = 'block';
+
+                setTimeout(() => {
+                  if(chatB) chatB.style.display = 'block';
+
+                  // === TAHAP 5: MENU SETTING ===
+                  setTimeout(() => {
+                    if(icon) icon.textContent = '⚙️';
+                    if(stepLabel) stepLabel.textContent = 'TAHAP 5: PENGATURAN PERSONA &amp; BACKUP';
+                    if(title) title.textContent = 'Membuka Menu Setting Workspace';
+                    if(desc) desc.textContent = 'Mengatur Persona kepribadian asisten (SOUL.md), kredensial, dan download backup data 1-klik.';
+
+                    if(tabSett) tabSett.className = 'nav-tab-item active';
+                    if(tabMain) tabMain.className = 'nav-tab-item';
+                    if(settView) settView.hidden = false;
+                    // Settings menambah tinggi jendela: hitung ulang posisi kursor SETELAH DOM selesai layout.
+                    moveDashboardCursor(tabSett);
+                    clickPulse(tabSett);
+
+                    setTimeout(runDashboardLoop, 4500);
+                  }, 2400);
+                }, 1200);
+              }, 2200);
+            }, 1800);
+          }, 2000);
+        }, 1800);
+      }, 2000);
+    }, 1200);
+  }
+
+  if(document.readyState === 'complete') runDashboardLoop();
+  else window.addEventListener('load', runDashboardLoop);
+})();
+</script>
+
+
+<!-- Keunggulan Utama -->
+<section class="section-block" id="keunggulan">
+  <div style="text-align:center;max-width:720px;margin:0 auto 32px">
+    <div class="section-tag">MENGAPA MYHERMES?</div>
+    <h2 class="section-title">Solusi AI Assistant Mandiri Tanpa Ribet</h2>
+    <p class="section-subtitle" style="margin:0 auto">Didesain untuk privasi maksimal, kemudahan akses multi-channel, dan fleksibilitas model AI kelas dunia.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">🔒</div>
+      <h3>Isolasi Data 100% per User</h3>
+      <p>Setiap akun mendapatkan environment Docker mandiri. Riwayat chat, memory, tool, dan API key Anda tidak pernah bercampur dengan pengguna lain.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <h3>Hermes Agent Terpasang</h3>
+      <p>Agen AI otonom dari Nous Research siap menjalankan perintah terminal, coding, riset web, analisis berkas, hingga eksekusi workflow cerdas.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon">🔀</div>
+      <h3>9Router AI Gateway</h3>
+      <p>Satu endpoint untuk berganti antar puluhan model LLM (Claude, GPT-4, Llama, Qwen, Gemini, DeepSeek) tanpa perlu mengubah konfigurasi rumit.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon">📱</div>
+      <h3>Pindai QR Telegram &amp; WhatsApp</h3>
+      <p>Hubungkan asisten langsung ke aplikasi chat harian Anda. Cukup scan QR dari dashboard, tanpa perlu repot setup token BotFather manual.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon">⚙️</div>
+      <h3>Setup Model Terpandu</h3>
+      <p>Pilih provider dan model AI favorit Anda langsung dari web dashboard lewat konsol interaktif tanpa perlu membuka shell server.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon">🛡️</div>
+      <h3>Koneksi Aman Cloudflare</h3>
+      <p>Seluruh instance dilindungi enkripsi SSL modern, tunnel terisolasi, dan proteksi brute-force otomatis.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Fitur-Fitur & Ilustrasi Visual -->
+<section class="section-block" id="fitur">
+  <div style="text-align:center;max-width:720px;margin:0 auto 32px">
+    <div class="section-tag">FITUR &amp; CARA KERJA</div>
+    <h2 class="section-title">Semua yang Anda Butuhkan dalam Satu Dasbor</h2>
+  </div>
+
+  <div class="showcase-cards">
+    <!-- Card 1: Setup Model -->
+    <div class="showcase-row">
+      <div class="showcase-text">
+        <span class="step-num">01</span>
+        <h3>Konsol Interaktif Setup Model</h3>
+        <p>Ganti model AI kapan saja dengan mudah. Buka dialog setup dan pilih berbagai model frontier (OpenAI, Anthropic, OpenRouter, MiniMax, Gemini) secara interaktif.</p>
+        <ul class="feature-bullets">
+          <li>Penggantian provider instan</li>
+          <li>Uji coba respon model langsung di dasbor</li>
+          <li>Tanpa perlu edit berkas konfigurasi manual</li>
+        </ul>
+      </div>
+      <div class="terminal-mockup">
+        <div class="term-header">
+          <div class="window-dots"><span></span><span></span><span></span></div>
+          <span class="term-title">Model Setup Wizard</span>
+        </div>
+        <pre class="term-body"><span class="t-dim">=== Hermes Model Configuration ===</span>
+<span class="t-cyan">? Select primary model provider:</span>
+  1) 9Router (Universal Proxy) <span class="t-green">[Recommended]</span>
+  2) Anthropic Claude (Direct)
+  3) OpenAI Official API
+  4) OpenRouter Custom
+
+<span class="t-cyan">Pilihan Anda &gt;</span> 1
+<span class="t-green">✓ Terhubung ke 9Router Gateway</span>
+<span class="t-dim">Model aktif: oc/muse-spark-1.2-contributor-free</span>
+<span class="t-green">Konfigurasi berhasil disimpan!</span></pre>
+      </div>
+    </div>
+
+    <!-- Card 2: Channel QR Onboarding -->
+    <div class="showcase-row reverse">
+      <div class="showcase-text">
+        <span class="step-num">02</span>
+        <h3>Tautkan Asisten ke Telegram &amp; WhatsApp</h3>
+        <p>Gunakan asisten AI Anda dari mana saja saat bepergian. Hubungkan smartphone Anda melalui scan kode QR sekali klik.</p>
+        <ul class="feature-bullets">
+          <li>Pindai QR WhatsApp Linked Device langsung</li>
+          <li>Koneksi instan bot Telegram tanpa setup server</li>
+          <li>Session pairing aman berbatas waktu (maks 10 menit)</li>
+        </ul>
+      </div>
+      <div class="qr-mockup-box">
+        <div class="qr-mock-card">
+          <div class="qr-mock-title">HUBUNGKAN CHANNEL</div>
+          <div class="qr-grid-inner">
+            <div class="qr-side">
+              <h4>WhatsApp QR Pairing</h4>
+              <p class="qr-desc">Buka WhatsApp &gt; Perangkat Tertaut &gt; Tautkan Perangkat</p>
+              <div class="qr-code-art">
+                <svg viewBox="0 0 100 100" width="120" height="120">
+                  <rect width="100" height="100" fill="#fff" rx="6"/>
+                  <rect x="10" y="10" width="25" height="25" fill="#08090a"/>
+                  <rect x="15" y="15" width="15" height="15" fill="#fff"/>
+                  <rect x="18" y="18" width="9" height="9" fill="#08090a"/>
+                  <rect x="65" y="10" width="25" height="25" fill="#08090a"/>
+                  <rect x="70" y="15" width="15" height="15" fill="#fff"/>
+                  <rect x="73" y="18" width="9" height="9" fill="#08090a"/>
+                  <rect x="10" y="65" width="25" height="25" fill="#08090a"/>
+                  <rect x="15" y="70" width="15" height="15" fill="#fff"/>
+                  <rect x="18" y="73" width="9" height="9" fill="#08090a"/>
+                  <rect x="42" y="10" width="16" height="8" fill="#08090a"/>
+                  <rect x="42" y="24" width="8" height="18" fill="#08090a"/>
+                  <rect x="10" y="42" width="18" height="8" fill="#08090a"/>
+                  <rect x="35" y="45" width="12" height="12" fill="#08090a"/>
+                  <rect x="52" y="45" width="10" height="20" fill="#08090a"/>
+                  <rect x="68" y="42" width="22" height="8" fill="#08090a"/>
+                  <rect x="70" y="58" width="20" height="12" fill="#08090a"/>
+                  <rect x="42" y="72" width="20" height="18" fill="#08090a"/>
+                  <rect x="70" y="78" width="20" height="12" fill="#08090a"/>
+                </svg>
+              </div>
+              <span class="badge b-run">Siap dipindai</span>
+            </div>
+            <div class="qr-side">
+              <h4>Telegram Bot</h4>
+              <p class="qr-desc">Dukungan QR pairing otomatis atau token manual</p>
+              <div class="tg-status-pill">
+                <span class="tg-icon">✈</span>
+                <span>@AlexPersonalBot</span>
+              </div>
+              <span class="badge b-run" style="margin-top:16px">Aktif &amp; Terhubung</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section Arsitektur Diagram Sistem Terintegrasi -->
+<section class="section-block" id="arsitektur" style="border-top:1px solid var(--line);padding-top:56px">
+  <div style="text-align:center;max-width:760px;margin:0 auto 36px">
+    <div class="section-tag">TEKNOLOGI &amp; ALUR KERJA</div>
+    <h2 class="section-title" style="font-size:34px;margin-bottom:12px">Skema Alur Kerja: Hermes, 9Router, &amp; Provider LLM</h2>
+    <p class="section-subtitle" style="margin:auto">
+      Diagram urutan langkah bagaimana pesan pengguna diproses oleh Hermes Agent di dalam sandbox terisolasi, dialihkan melalui 9Router Gateway, dan dieksekusi oleh API Model AI.
+    </p>
+  </div>
+
+  <style>
+    .arch-flow-grid{display:grid;grid-template-columns:1fr 36px 1.2fr 36px 1fr 36px 1.15fr;gap:0;align-items:stretch}
+    .arch-col{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:14px;padding:18px 14px;display:flex;flex-direction:column;gap:12px;position:relative}
+    .arch-col-title{font-size:11px;font-weight:700;letter-spacing:.08em;font-family:'JetBrains Mono',monospace;margin-bottom:4px}
+    .arch-card-box{background:#0f172a;border-radius:10px;padding:12px 14px;border:1px solid var(--line);display:flex;flex-direction:column;gap:5px}
+    .arch-step-badge{position:absolute;top:-12px;left:16px;background:var(--acc);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:999px;font-family:'JetBrains Mono',monospace;box-shadow:0 4px 10px rgba(0,0,0,.5)}
+    .arch-arrow-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 2px}
+    .arch-arrow-badge{background:#1e293b;border:1px solid var(--line2);border-radius:6px;padding:4px 6px;font-size:11px;font-weight:700;color:var(--dim);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+    .arch-arrow-mobile{display:none;align-items:center;justify-content:center;color:var(--dim);font-size:18px;margin:8px 0}
+    @media(max-width:1020px){
+      .arch-flow-grid{display:flex;flex-direction:column;gap:16px}
+      .arch-arrow-col{display:none}
+      .arch-arrow-mobile{display:flex}
+    }
+  </style>
+
+  <div class="mockup-window" style="background:#090d16;border-color:var(--line2);padding:24px 18px">
+    <div class="arch-flow-grid">
+      
+      <!-- TAHAP 1: USER CHANNELS -->
+      <div class="arch-col" style="border-color:rgba(16,185,129,.35)">
+        <div class="arch-step-badge" style="background:#10b981">LANGKAH 1</div>
+        <div class="arch-col-title" style="color:#34d399">1. USER CHANNELS</div>
+        
+        <div class="arch-card-box" style="border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.04)">
+          <div style="font-size:13px;font-weight:700;color:#34d399">🟢 WhatsApp</div>
+          <div style="font-size:11px;color:var(--tx)">Self-Chat &amp; Mode Bot</div>
+          <div style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace">Pesan teks, audio, file</div>
+        </div>
+
+        <div class="arch-card-box" style="border-color:rgba(6,182,212,.3);background:rgba(6,182,212,.04)">
+          <div style="font-size:13px;font-weight:700;color:#22d3ee">✈️ Telegram Bot</div>
+          <div style="font-size:11px;color:var(--tx)">Pairing QR 1-Klik</div>
+          <div style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace">Bot token &amp; polling</div>
+        </div>
+
+        <div class="arch-card-box" style="border-color:rgba(168,85,247,.3);background:rgba(168,85,247,.04)">
+          <div style="font-size:13px;font-weight:700;color:#c084fc">💬 Web Dashboard</div>
+          <div style="font-size:11px;color:var(--tx)">Live Test Chat</div>
+          <div style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace">Pengujian internal</div>
+        </div>
+
+        <div style="margin-top:auto;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--dim);text-align:center">
+          📱 <i>Device Pengguna (HP/PC)</i>
+        </div>
+      </div>
+
+      <!-- ARROW 1 -> 2 -->
+      <div class="arch-arrow-col">
+        <div class="arch-arrow-badge" style="color:#10b981;border-color:rgba(16,185,129,.4)" title="1. Pesan Masuk">➔<br><span style="font-size:9px">(1)</span></div>
+        <div class="arch-arrow-badge" style="color:#34d399;border-color:rgba(52,211,153,.4)" title="5. Kirim Balasan">⬅<br><span style="font-size:9px">(5)</span></div>
+      </div>
+      <div class="arch-arrow-mobile">⬇️ (1) Pesan Masuk &nbsp;|&nbsp; ⬆️ (5) Balasan Dikirim ⬇️</div>
+
+      <!-- TAHAP 2: HERMES AGENT & LOCAL SANDBOX -->
+      <div class="arch-col" style="border-color:rgba(99,102,241,.45)">
+        <div class="arch-step-badge" style="background:#6366f1">LANGKAH 2 &amp; 4</div>
+        <div class="arch-col-title" style="color:#818cf8">2. HERMES AGENT ENGINE</div>
+        
+        <div class="arch-card-box" style="border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.06)">
+          <div style="font-size:13px;font-weight:700;color:#c7d2fe">🧠 Core Agent Reasoning</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">• Memuat history chat &amp; memory</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">• Instruksi persona <code>SOUL.md</code></div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">• Agentic Tool Decision (ReAct)</div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#f59e0b;padding:2px 0">
+          <span>⬇️ Panggil Tool</span> <span>•</span> <span>⬆️ Hasil Eksekusi</span>
+        </div>
+
+        <div class="arch-card-box" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04);margin-top:auto">
+          <div style="font-size:12.5px;font-weight:700;color:#fde68a">⚡ Local Linux Sandbox</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">🖥️ <b>Terminal:</b> Bash &amp; Python CLI</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">🌐 <b>Web Search:</b> Riset online</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">📁 <b>File System:</b> Baca/tulis kode</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">⏰ <b>Cron:</b> Penjadwalan tugas</div>
+        </div>
+
+        <div style="font-size:10.5px;color:#818cf8;text-align:center;font-family:'JetBrains Mono',monospace">
+          Dedicated Container (Terisolasi)
+        </div>
+      </div>
+
+      <!-- ARROW 2 -> 3 -->
+      <div class="arch-arrow-col">
+        <div class="arch-arrow-badge" style="color:#f59e0b;border-color:rgba(245,158,11,.4)" title="2. Request LLM">➔<br><span style="font-size:9px">(2)</span></div>
+        <div class="arch-arrow-badge" style="color:#10b981;border-color:rgba(16,185,129,.4)" title="4. Stream Respon Balik">⬅<br><span style="font-size:9px">(4)</span></div>
+      </div>
+      <div class="arch-arrow-mobile">⬇️ (2) Request LLM &nbsp;|&nbsp; ⬆️ (4) Stream Balik ⬇️</div>
+
+      <!-- TAHAP 3: 9ROUTER GATEWAY -->
+      <div class="arch-col" style="border-color:rgba(245,158,11,.45)">
+        <div class="arch-step-badge" style="background:#f59e0b">LANGKAH 3</div>
+        <div class="arch-col-title" style="color:#fbbf24">3. 9ROUTER GATEWAY</div>
+        
+        <div class="arch-card-box" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06);gap:8px">
+          <div style="font-size:13px;font-weight:700;color:#fed7aa">🔀 AI Bridge &amp; Proxy</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">🔌 <b>Format OpenAI:</b> <code>/v1/chat/completions</code></div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">⚖️ <b>Smart Balancer:</b> Failover &amp; auto-retry</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">🛡️ <b>API Key Masking:</b> Kredensial aman</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">⚡ <b>SSE Streaming:</b> Respon real-time</div>
+          <div style="font-size:11px;color:var(--tx);line-height:1.4">📚 <b>690+ Models:</b> Registry global</div>
+        </div>
+
+        <div style="margin-top:auto;padding-top:10px;border-top:1px solid var(--line);font-size:10.5px;color:#fbbf24;text-align:center;font-family:'JetBrains Mono',monospace">
+          Universal Gateway Bridge
+        </div>
+      </div>
+
+      <!-- ARROW 3 -> 4 -->
+      <div class="arch-arrow-col">
+        <div class="arch-arrow-badge" style="color:#a855f7;border-color:rgba(168,85,247,.4)" title="3. Route API Provider">➔<br><span style="font-size:9px">(3)</span></div>
+      </div>
+      <div class="arch-arrow-mobile">⬇️ (3) Route ke API Model Luar ⬇️</div>
+
+      <!-- TAHAP 4: EXTERNAL LLM PROVIDERS -->
+      <div class="arch-col" style="border-color:rgba(168,85,247,.35)">
+        <div class="arch-step-badge" style="background:#a855f7">PROVIDER API</div>
+        <div class="arch-col-title" style="color:#c084fc">4. LLM MODEL PROVIDERS</div>
+        
+        <div class="arch-card-box" style="border-color:rgba(16,185,129,.25)">
+          <div style="font-size:12px;font-weight:700;color:#34d399">FREE TIER (COMMUNITY)</div>
+          <div style="font-size:11px;color:var(--tx)">• OpenCode, Muse-Spark, HY3</div>
+          <div style="font-size:10px;color:var(--dim)">Tanpa kuota luar / gratis</div>
+        </div>
+
+        <div class="arch-card-box" style="border-color:rgba(6,182,212,.25)">
+          <div style="font-size:12px;font-weight:700;color:#22d3ee">GOOGLE &amp; QWEN (LATEST)</div>
+          <div style="font-size:11px;color:var(--tx)">• Gemini &amp; Qwen Reasoning</div>
+          <div style="font-size:10px;color:var(--dim)">Konteks panjang &amp; riset cepat</div>
+        </div>
+
+        <div class="arch-card-box" style="border-color:rgba(245,158,11,.25)">
+          <div style="font-size:12px;font-weight:700;color:#fbbf24">ANTHROPIC CLAUDE</div>
+          <div style="font-size:11px;color:var(--tx)">• Claude 3.5 Sonnet / Haiku</div>
+          <div style="font-size:10px;color:var(--dim)">Penalaran coding &amp; agentik</div>
+        </div>
+
+        <div class="arch-card-box" style="border-color:rgba(168,85,247,.25)">
+          <div style="font-size:12px;font-weight:700;color:#c084fc">CUSTOM KEY &amp; OAUTH (BYOK)</div>
+          <div style="font-size:11px;color:var(--tx)">• OpenAI, DeepSeek V3/R1, Mistral</div>
+          <div style="font-size:10px;color:var(--dim)">Bebas hubungkan API Key sendiri</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Ringkasan Alur 5 Langkah Terbaca Rapi -->
+    <div style="margin-top:20px;padding:14px 18px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:10px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim)">
+      <div><b style="color:#10b981">(1)</b> Pesan masuk dari WA/TG</div>
+      <div style="color:var(--dim)">➔</div>
+      <div><b style="color:#6366f1">(2)</b> Hermes siapkan memory &amp; prompt</div>
+      <div style="color:var(--dim)">➔</div>
+      <div><b style="color:#fbbf24">(3)</b> 9Router teruskan ke LLM</div>
+      <div style="color:var(--dim)">➔</div>
+      <div><b style="color:#22d3ee">(4)</b> Hermes jalankan aksi Sandbox</div>
+      <div style="color:var(--dim)">➔</div>
+      <div><b style="color:#10b981">(5)</b> Balasan terkirim ke User</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Section Pricing Paket Berlangganan -->
+<section class="section-block" id="paket" style="border-top:1px solid var(--line);padding-top:56px">
+  <div style="text-align:center;max-width:760px;margin:0 auto 40px">
+    <div class="section-tag">PILIHAN PAKET TERJANGKAU</div>
+    <h2 class="section-title" style="font-size:34px;margin-bottom:12px">Paket Berlangganan Dedicated Workspace</h2>
+    <p class="section-subtitle" style="margin:auto">
+      Pilih paket yang sesuai dengan kebutuhan Anda. Setiap instance bersifat <i>Bring Your Own Key (BYOK) Ready</i> — Anda bebas menghubungkan API Key pribadi atau akun OAuth untuk mengakses kecerdasan model tingkat lanjut kapan saja.
+    </p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:24px;align-items:stretch">
+    {% for p in plans %}
+    <div class="card" style="margin:0;display:flex;flex-direction:column;position:relative;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));border-color:{{ 'var(--acc2)' if p.id=='pro_gemini' else ('#eab308' if p.id=='ultimate_claude' else 'var(--line)') }};box-shadow:{{ '0 12px 36px rgba(94,106,210,.25)' if p.id=='pro_gemini' else '0 8px 24px rgba(0,0,0,.3)' }}">
+      
+      {% if p.badge %}
+      <div style="position:absolute;top:-12px;right:20px;background:{{ 'linear-gradient(135deg,var(--acc),#3d45a3)' if p.id=='pro_gemini' else ('linear-gradient(135deg,#eab308,#ca8a04)' if p.id=='ultimate_claude' else 'var(--panel2)') }};color:#fff;font-size:11px;font-weight:700;padding:3px 12px;border-radius:999px;letter-spacing:.05em;text-transform:uppercase;box-shadow:0 4px 12px rgba(0,0,0,.4)">
+        {{ p.badge }}
+      </div>
+      {% endif %}
+
+      <div style="margin-bottom:16px">
+        <h3 style="font-size:20px;font-weight:700;margin-bottom:6px">{{ p.name }}</h3>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:12px">
+          <span style="font-size:14px;color:var(--dim);text-decoration:line-through">Rp {{ "{:,}".format(p.original_price).replace(',', '.') }}</span>
+          <span style="font-size:32px;font-weight:800;color:#fff;letter-spacing:-.03em">Rp {{ "{:,}".format(p.promo_price).replace(',', '.') }}</span>
+          <span style="font-size:13px;color:var(--dim)">{{ p.period }}</span>
+        </div>
+        
+        <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+          {% if p.stock > 0 %}
+            <span class="badge b-run" style="font-size:11px;padding:2px 8px">🔥 Sisa Slot: {{ p.stock }} Instance</span>
+          {% else %}
+            <span class="badge b-err" style="font-size:11px;padding:2px 8px">Slot Penuh</span>
+          {% endif %}
+          <span class="badge" style="font-size:11px;background:rgba(255,255,255,.05);color:var(--dim)">Diskon Promo 50%</span>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--line);padding-top:16px;margin-bottom:24px;flex:1">
+        <div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Fitur &amp; Kemampuan:</div>
+        <ul style="margin:0;padding-left:18px;color:var(--tx);font-size:13.5px;line-height:1.7">
+          {% for feat in p.features %}
+            <li style="margin-bottom:6px">{{ feat }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <a href="#kontak" class="{{ 'btn-primary' if p.id in ('pro_gemini','ultimate_claude') else 'btn-secondary' }}" style="text-align:center;width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:10px">
+        Pilih Paket Ini →
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Info Registrasi & Kontak Admin -->
+<section class="section-block cta-box-wrap" id="kontak">
+  <div class="cta-box">
+    <div class="cta-badge">AKSES EKSKLUSIF</div>
+    <h2>Tertarik Memiliki AI Workspace Sendiri?</h2>
+    <p>
+      Pendaftaran saat ini <b>belum dibuka secara umum</b> demi menjaga kualitas performa dan isolasi resource server. Jika Anda membutuhkan workspace Hermes Agent pribadi, silakan hubungi administrator.
+    </p>
+    <div class="cta-contact-cards">
+      <div class="contact-card">
+        <div class="contact-icon">💬</div>
+        <div class="contact-info">
+          <b>Hubungi Admin</b>
+          <span>Kontak pengelola untuk pembuatan akun &amp; alokasi resource</span>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-icon">🔑</div>
+        <div class="contact-info">
+          <b>Sudah Punya Akun?</b>
+          <a class="contact-link" href="{{ url_for('login') }}">Langsung Masuk ke Panel →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="landing-footer">
+  <div class="footer-brand"><i>●</i> MyHermes</div>
+  <p>© 2026 MyHermes AI Platform. Didukung oleh Nous Research Hermes Agent &amp; 9Router Gateway.</p>
+</footer>
+{% endblock %}

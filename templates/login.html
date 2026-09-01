@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="login-wrap">
+  <div class="card login-card">
+    <div class="brand-mark"><svg viewBox="0 0 32 32" style="width:24px;height:24px;fill:#fff"><path d="M7 24L7 8L12 8L16 15L20 8L25 8L25 24L21.5 24L21.5 13.5L17.5 20L14.5 20L10.5 13.5L10.5 24Z"/></svg></div>
+    <h1>MyHermes</h1>
+    <p class="kv">Panel manajemen instance Hermes + 9Router.</p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="fld">Username
+        <input name="username" autocomplete="username" required autofocus>
+      </label>
+      <label class="fld">Password
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button style="width:100%">Masuk</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

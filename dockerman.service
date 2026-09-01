@@ -1,0 +1,17 @@
+# Salinan referensi dari unit aktif ~/.config/systemd/user/dockerman.service
+# Panel berjalan sebagai user service (bukan root) memakai Gunicorn+gevent;
+# `sg docker` hanya memberi grup docker ke proses panel.
+[Unit]
+Description=MyHermes - panel manajemen instance Hermes/9Router
+After=network.target docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/malik/proyekku/dockermanagement
+# gevent adalah worker WebSocket; sg docker hanya memberi proses panel grup Docker.
+ExecStart=/usr/bin/sg docker -c "exec /home/malik/.hermes/hermes-agent/venv/bin/gunicorn --worker-class gevent --workers 1 --timeout 120 --bind 127.0.0.1:8899 --access-logfile - --error-logfile - app:app"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

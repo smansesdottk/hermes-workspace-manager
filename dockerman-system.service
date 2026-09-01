@@ -1,0 +1,16 @@
+[Unit]
+Description=MyHermes - panel manajemen instance Hermes/9Router
+After=network.target docker.service cloudflared.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=malik
+Group=docker
+WorkingDirectory=/home/malik/proyekku/dockermanagement
+ExecStart=/home/malik/.hermes/hermes-agent/venv/bin/gunicorn --worker-class gevent --workers 1 --timeout 120 --bind 127.0.0.1:8899 --access-logfile - --error-logfile - app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

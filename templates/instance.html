@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="hero"><div><h1>{{ inst.slug }}</h1><p class="sub">Kelola Hermes, model, dan channel pesan dari satu halaman.</p></div><span id="inst-status-badge" class="badge b-{{'run' if inst.status=='running' else 'stop'}}">{{ inst.status }}</span></div>
+
+<!-- Peringatan Masa Aktif di Halaman Dasbor Instance (Jika Mendekati Habis <= 3 Hari) -->
+{% if d.expiry and d.expiry.warning and not d.expiry.is_expired %}
+<div class="flash" style="background:rgba(245,191,88,.12);border-color:rgba(245,191,88,.35);color:#ffd98a;margin-bottom:16px">
+  ⚠️ <b>Pemberitahuan Masa Aktif:</b> Masa berlangganan instance ini akan berakhir dalam <b>{{ d.expiry.label }}</b>. Harap hubungi admin untuk perpanjangan.
+</div>
+{% endif %}
+
+<!-- Submenu Tab Navigasi -->
+<div class="nav-tabs-bar">
+  <a class="nav-tab-item {{ 'active' if active_tab=='dashboard' else '' }}" href="{{ url_for('instance_page', slug=inst.slug) }}">📊 Dasbor Utama</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='terminal' else '' }}" href="{{ url_for('instance_terminal_page', slug=inst.slug) }}">🖥️ Terminal Instance</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='cron' else '' }}" href="{{ url_for('instance_cron_page', slug=inst.slug) }}">⏰ Tugas Terjadwal (Cron)</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='settings' else '' }}" href="{{ url_for('instance_settings_page', slug=inst.slug) }}">⚙️ Menu Setting</a>
+</div>
+
+<div class="grid2">
+<section class="card">
+  <h2>Akses layanan</h2>
+  <p id="hermes-link">{% if inst.hermes_url %}<a class="svc-link" href="{{inst.hermes_url}}" target="_blank" rel="noopener">Buka Hermes ↗</a>{% else %}Menyiapkan alamat Hermes…{% endif %}</p>
+  <p id="router-link">{% if inst.router_url %}<a class="svc-link" href="{{inst.router_url}}/dashboard" target="_blank" rel="noopener">Buka 9Router ↗</a>{% else %}Menyiapkan alamat 9Router…{% endif %}</p>
+
+  <!-- Kredensial ditempatkan di antara link layanan dan kontrol instance; data tetap tersembunyi di dalam akordion -->
+  <details class="service-creds" style="margin:14px 0;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02);padding:0 12px">
+    <summary style="cursor:pointer;padding:9px 0;font-size:13px;font-weight:600;color:#c7caff">🔐 Tampilkan Kredensial</summary>
+    <div class="kv" style="font-size:12px;margin:0 0 8px">Password admin lokal untuk akses Hermes dan 9Router.</div>
+    <pre id="creds" class="mono" style="margin:0 0 12px;white-space:pre-wrap"></pre>
+  </details>
+
+  <div class="btnrow" style="align-items:center">
+    <form method="post" action="{{url_for('instance_action',slug=inst.slug)}}"><input type="hidden" name="do" value="start"><button>Start</button></form>
+    <form method="post" action="{{url_for('instance_action',slug=inst.slug)}}"><input type="hidden" name="do" value="restart"><button class="warnb">Restart</button></form>
+    <form method="post" action="{{url_for('instance_action',slug=inst.slug)}}"><input type="hidden" name="do" value="stop"><button class="danger">Stop</button></form>
+    
+    <!-- Tombol Cek Versi & Update Kondisional -->
+    <button type="button" class="ghost" id="btn-check-version" style="font-size:13px;padding:9px 14px">🔍 Cek Versi Terbaru</button>
+
+    <form method="post" id="form-user-update" action="{{url_for('instance_action',slug=inst.slug)}}" onsubmit="return confirm('Update instance ke versi image Hermes & 9Router terbaru? Seluruh riwayat dan data percakapan Anda tetap tersimpan aman.')" hidden>
+      <input type="hidden" name="do" value="update">
+      <button type="submit" class="ghost" style="color:#a7f3d0;border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.1);font-weight:600">✨ Update ke Versi Terbaru</button>
+    </form>
+  </div>
+  <div id="version-check-result" class="kv" style="font-size:12px;margin-top:8px;line-height:1.5" hidden></div>
+</section>
+<section class="card"><h2>Kapasitas</h2><table class="kvtable"><tr><th></th><th>CPU</th><th>Memori</th></tr><tr><td>Hermes</td><td id="h-cpu">{{d.stats_hermes.cpu if d.stats_hermes else '—'}}</td><td id="h-mem">{{d.stats_hermes.mem if d.stats_hermes else '—'}}</td></tr><tr><td>9Router</td><td id="r-cpu">{{d.stats_router.cpu if d.stats_router else '—'}}</td><td id="r-mem">{{d.stats_router.mem if d.stats_router else '—'}}</td></tr><tr><td>Data</td><td colspan="2" id="d-disk">{{(d.disk/1048576)|round(1)}} MB / {{inst.storage_limit}}</td></tr></table></section>
+</div>
+
+<section class="card"><h2>Model</h2>
+<div class="model-info-row">
+  <div>
+    <div class="kv">Model Aktif:</div>
+    <b class="active-model-name mono" id="active-model-label">{{ d.current_model.model }}</b>
+    <div class="kv" style="font-size:12px;margin-top:2px" id="active-provider-label">Provider: {{ d.current_model.provider }}</div>
+  </div>
+  <div class="btnrow" style="margin:0">
+    <button type="button" class="ghost" id="open-quick-model" style="color:var(--acc2);border-color:rgba(130,143,255,.3)">⚡ Pilih Model Cepat</button>
+  </div>
+</div>
+
+<!-- Quick Model Selector Modal/Box -->
+<div id="quick-model-box" hidden class="panelbox">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3>Pilih Model Cepat (9Router / Custom)</h3>
+    <button type="button" class="ghost" onclick="document.getElementById('quick-model-box').hidden=true" style="padding:4px 8px;font-size:12px">Tutup ✕</button>
+  </div>
+  <p class="kv">Pilih dari model populer atau ketik model id yang tersedia di 9Router Anda.</p>
+  
+  <div class="btnrow" style="margin-bottom:14px">
+    <button type="button" class="ghost" onclick="setQuickModel('qd/qmodel_38max')" style="font-size:12px">qd/qmodel_38max</button>
+    <button type="button" class="ghost" onclick="setQuickModel('alicode-intl/qwen3.5-plus')" style="font-size:12px">qwen3.5-plus</button>
+    <button type="button" class="ghost" onclick="setQuickModel('oc/muse-spark-1.2-contributor-free')" style="font-size:12px">muse-spark (free)</button>
+    <button type="button" class="ghost" onclick="setQuickModel('oc/hy3-free')" style="font-size:12px">hy3-free</button>
+  </div>
+
+  <form id="custom-model-form" class="row">
+    <input id="custom-model-input" placeholder="Atau ketik ID Model (misal: qd/qmodel_38max, claude-3-5-sonnet...)" style="flex:1" required>
+    <button>Terapkan Model</button>
+  </form>
+  <span id="quick-model-status" class="kv" style="display:block;margin-top:8px"></span>
+</div>
+</section>
+
+<section class="card"><h2>Channel pesan</h2><p class="kv">Status diperbarui dari gateway Hermes. Anda tidak perlu membuka terminal.</p><div id="channels" class="grid2">Memuat status channel…</div><div class="btnrow"><button type="button" class="ghost" id="restart-gateway">Restart gateway</button><span id="gateway-status" class="kv"></span></div></section>
+<section class="card"><h2>Hubungkan channel</h2><div class="grid2"><div class="connect-col"><h3>Telegram</h3><p class="kv"><b>Pilih satu cara saja:</b> QR <em>atau</em> token manual. Jangan lakukan keduanya.</p><div class="btnrow"><button class="ghost" type="button" onclick="begin('telegram')">Hubungkan dengan QR</button><a id="tg-link" class="svc-link" hidden target="_blank" rel="noopener">Buka Telegram ↗</a></div><details><summary>Gunakan token manual sebagai alternatif</summary><form method="post" action="{{url_for('telegram_manual',slug=inst.slug)}}" class="stackform"><input type="password" name="token" placeholder="Token BotFather" required><input name="allowed_user" inputmode="numeric" placeholder="ID Telegram Anda" required><button class="ghost">Simpan token &amp; restart gateway</button></form></details><div id="telegram-status" class="kv"></div></div><div class="connect-col"><h3>WhatsApp</h3>
+<p class="kv">Pindai QR dari WhatsApp → Perangkat tertaut → Tautkan perangkat.</p>
+<div class="wa-options-box">
+  <label class="wa-radio-label">
+    <input type="radio" name="wa_mode" value="self-chat" checked onchange="toggleWaAllowedInput()">
+    <span><b>Self-Chat (Pesan ke Diri Sendiri)</b> — chat dengan asisten di nomor WA pribadi Anda sendiri.</span>
+  </label>
+  <label class="wa-radio-label">
+    <input type="radio" name="wa_mode" value="bot" onchange="toggleWaAllowedInput()">
+    <span><b>Mode Bot (Nomor Khusus)</b> — asisten bertindak sebagai bot untuk nomor/orang lain.</span>
+  </label>
+  <div id="wa-allowed-box" class="wa-allowed-box" hidden>
+    <label class="kv" style="font-size:12px">Nomor Kontak yang Diizinkan (opsional, pisahkan koma):</label>
+    <input id="wa-allowed-input" placeholder="Contoh: 628123456789, 628987654321" style="width:100%;margin-top:4px">
+    <span class="kv" style="font-size:11.5px">Kosongkan jika hanya ingin mengizinkan nomor yang melakukan scan QR.</span>
+  </div>
+</div>
+<div class="btnrow" style="margin-top:12px"><button class="ghost" type="button" onclick="begin('whatsapp')">Pindai QR WhatsApp</button></div><div id="whatsapp-status" class="kv"></div></div></div><img id="connect-qr" hidden alt="Kode QR untuk menghubungkan pesan"><p class="kv">QR berlaku maksimal 10 menit dan hanya ditampilkan pada sesi ini.</p></section>
+
+<!-- Widget Chat Uji Coba (Accordion) -->
+<details class="card chat-accordion" open>
+  <summary class="logsum"><b>💬 Test Chat Model Aktif</b> <span id="chat-model-badge" class="kv" style="font-size:12.5px;font-weight:normal;margin-left:8px">({{ d.current_model.model }})</span></summary>
+  <div class="chat-widget-box" style="margin-top:14px">
+    <div class="chat-header">
+      <span class="kv" style="font-size:12.5px">Uji respon model langsung dari dashboard</span>
+      <button type="button" class="ghost" id="clear-chat-btn" style="font-size:11.5px;padding:4px 10px">🧹 Bersihkan Sesi Chat</button>
+    </div>
+    <div class="chat-history" id="chat-box">
+      <div class="chat-msg chat-bot">
+        <div class="chat-sender">Asisten AI</div>
+        <div class="chat-bubble">Halo! Saya asisten dari instance ini. Anda bisa menguji apakah model yang Anda pasang sudah dapat merespon dengan baik melalui kotak chat ini. Riwayat percakapan akan diingat selama sesi ini aktif.</div>
+      </div>
+    </div>
+    <form id="chat-form" class="chat-input-row" onsubmit="return false">
+      <input id="chat-input" placeholder="Ketik pesan uji coba untuk model..." autocomplete="off" required>
+      <button type="button" id="chat-send-btn">Kirim</button>
+    </form>
+
+  </div>
+</details>
+
+<!-- Live Logs Viewer dengan Auto-Refresh & Selector -->
+<details class="card" id="logs-card">
+  <summary class="logsum"><b>📋 Live Log Layanan</b> <span class="kv" style="font-size:12.5px">(Hermes &amp; 9Router)</span></summary>
+  <div style="margin-top:14px">
+    <div class="btnrow" style="justify-content:space-between;margin:0 0 10px">
+      <div style="display:flex;gap:10px;align-items:center">
+        <label class="kv" style="font-size:13px;cursor:pointer"><input type="radio" name="log_target" value="hermes" checked onchange="switchLogTarget('hermes')"> Hermes Gateway</label>
+        <label class="kv" style="font-size:13px;cursor:pointer"><input type="radio" name="log_target" value="9router" onchange="switchLogTarget('9router')"> 9Router</label>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label class="kv" style="font-size:12px;cursor:pointer"><input type="checkbox" id="auto-log-chk" checked> Live Auto-refresh</label>
+      </div>
+    </div>
+    <pre id="live-logs" class="mono">{{d.logs_hermes}}</pre>
+  </div>
+</details>
+<script>
+const csrf=document.querySelector('[name="csrf-token"]').content,slug='{{inst.slug}}';
+async function api(path,opt={}){
+  opt.headers={...(opt.headers||{}),'X-CSRFToken':csrf};
+  let r=await fetch(path,opt);
+  let text=await r.text();
+  let x;
+  try {
+    x=JSON.parse(text);
+  } catch(e) {
+    if(!r.ok) throw Error(`Server error (HTTP ${r.status})`);
+    throw Error(text.slice(0, 100) || 'Respon server bukan JSON valid');
+  }
+  if(!r.ok) throw Error(x.error||x.message||`Permintaan gagal (${r.status})`);
+  return x;
+}
+async function loadChannels(){let box=document.getElementById('channels');try{let x=await api(`/i/${slug}/channels`),p=x.platforms.filter(x=>['telegram','whatsapp'].includes(x.id));box.innerHTML=p.map(c=>{let st=c.state==='connected'?'run':c.enabled?'part':'stop';return `<div class="channel"><div class="ch-head"><b>${c.name||c.id}</b><span class="badge b-${st}">${c.state||'unknown'}</span></div><p class="kv">${c.enabled?'Aktif':'Nonaktif'} · ${c.configured?'sudah terhubung':'belum terhubung'}${c.error_message?' · '+c.error_message:''}</p><div class="row"><button class="ghost" onclick="toggleChannel('${c.id}',${!c.enabled})">${c.enabled?'Nonaktifkan':'Aktifkan'}</button></div></div>`}).join('')}catch(e){box.textContent=e.message}}
+async function toggleChannel(kind,enabled){
+  try{
+    document.getElementById('gateway-status').textContent=`Mengubah status ${kind}...`;
+    await api(`/i/${slug}/channels/${kind}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({enabled})
+    });
+    document.getElementById('gateway-status').textContent=`${kind} ${enabled?'diaktifkan':'dinonaktifkan'}; gateway dimuat ulang…`;
+    await api(`/i/${slug}/gateway/restart`,{method:'POST'});
+    loadChannels();
+    setTimeout(loadChannels, 3000);
+    setTimeout(loadChannels, 8000);
+  }catch(e){
+    alert(e.message);
+  }
+}
+document.getElementById('restart-gateway').onclick=async()=>{
+  let s=document.getElementById('gateway-status');
+  s.textContent='Memuat ulang gateway…';
+  try{
+    let r=await api(`/i/${slug}/gateway/restart`,{method:'POST'});
+    s.textContent='Gateway dimuat ulang (proses restart dikirim).';
+    loadChannels();
+    setTimeout(loadChannels, 3000);
+    setTimeout(loadChannels, 8000);
+  }catch(e){
+    s.textContent=e.message;
+  }
+};
+
+let setupId='',setupPoll,sp=document.getElementById('setup-panel'),so=document.getElementById('setup-output');
+async function pollSetup(){
+  if(!setupId) return;
+  try {
+    let x=await api(`/i/${slug}/model/setup/${setupId}`);
+    if(x.output){
+      so.textContent+=x.output;
+      so.scrollTop=so.scrollHeight;
+    }
+    if(x.done){
+      clearInterval(setupPoll);
+      setupId='';
+      sp.hidden=true;
+      document.getElementById('model-status').textContent='Setup selesai.';
+      if(typeof refreshLiveState==='function') refreshLiveState();
+    }
+  } catch(e){
+    clearInterval(setupPoll);
+  }
+}
+
+let currentLogTarget='hermes';
+let latestLogs={hermes:`{{d.logs_hermes}}`, '9router':`{{d.logs_router}}`};
+
+function switchLogTarget(target){
+  currentLogTarget=target;
+  let logEl=document.getElementById('live-logs');
+  if(logEl) logEl.textContent=latestLogs[target]||'(Tidak ada log)';
+}
+
+async function refreshLiveState(){
+  try {
+    let s=await api(`/i/${slug}/links`);
+    
+    // 1. Update status badge
+    let badge=document.getElementById('inst-status-badge');
+    if(badge){
+      badge.className=`badge b-${s.status==='running'?'run':(s.status==='stopped'?'stop':(s.status==='error'?'err':'part'))}`;
+      badge.textContent=s.status;
+    }
+    
+    // 2. Update model aktif & provider label
+    let modelLabel=document.getElementById('active-model-label');
+    let provLabel=document.getElementById('active-provider-label');
+    let chatModelBadge=document.getElementById('chat-model-badge');
+    if(modelLabel && s.model) modelLabel.textContent=s.model;
+    if(provLabel && s.provider) provLabel.textContent=`Provider: ${s.provider}`;
+    if(chatModelBadge && s.model) chatModelBadge.textContent=`(${s.model})`;
+    
+    // 3. Update link Hermes & 9Router hanya jika container UP dan URL siap
+    let hBox=document.getElementById('hermes-link');
+    if(hBox){
+      if(!s.hermes_up){
+        hBox.innerHTML='<span class="kv">Hermes sedang berhenti. Klik Start untuk menjalankan.</span>';
+      } else if(s.hermes_url){
+        hBox.innerHTML=`<a class="svc-link" href="${s.hermes_url}" target="_blank" rel="noopener">Buka Hermes ↗</a>`;
+      } else {
+        hBox.innerHTML='<span class="kv">Menyiapkan alamat Hermes (tunnel sedang menghubungkan)…</span>';
+      }
+    }
+    
+    let rBox=document.getElementById('router-link');
+    if(rBox){
+      if(!s.router_up){
+        rBox.innerHTML='<span class="kv">9Router sedang berhenti. Klik Start untuk menjalankan.</span>';
+      } else if(s.router_url){
+        rBox.innerHTML=`<a class="svc-link" href="${s.router_url}/dashboard" target="_blank" rel="noopener">Buka 9Router ↗</a>`;
+      } else {
+        rBox.innerHTML='<span class="kv">Menyiapkan alamat 9Router (tunnel sedang menghubungkan)…</span>';
+      }
+    }
+    
+    // 4. Update kapasitas CPU & RAM real-time
+    let hCpu=document.getElementById('h-cpu'), hMem=document.getElementById('h-mem');
+    let rCpu=document.getElementById('r-cpu'), rMem=document.getElementById('r-mem');
+    let dDisk=document.getElementById('d-disk');
+    if(hCpu && s.stats_hermes) hCpu.textContent=s.stats_hermes.cpu || '—';
+    if(hMem && s.stats_hermes) hMem.textContent=s.stats_hermes.mem || '—';
+    if(rCpu && s.stats_router) rCpu.textContent=s.stats_router.cpu || '—';
+    if(rMem && s.stats_router) rMem.textContent=s.stats_router.mem || '—';
+    if(dDisk && s.disk!==undefined) dDisk.textContent=`${(s.disk/1048576).toFixed(1)} MB / {{inst.storage_limit}}`;
+    
+    // 5. Update Live Logs jika auto-refresh aktif
+    if(s.logs_hermes) latestLogs['hermes']=s.logs_hermes;
+    if(s.logs_router) latestLogs['9router']=s.logs_router;
+    let autoChk=document.getElementById('auto-log-chk');
+    let logsCard=document.getElementById('logs-card');
+    if(autoChk && autoChk.checked && logsCard && logsCard.open){
+      let logEl=document.getElementById('live-logs');
+      if(logEl) logEl.textContent=latestLogs[currentLogTarget]||'(Tidak ada log)';
+    }
+
+    // 6. Update status channel pesan secara berkala
+    if(typeof loadChannels === 'function') {
+      loadChannels();
+    }
+  } catch(e){}
+}
+
+setInterval(refreshLiveState, 4000);
+refreshLiveState();
+
+// Quick Model Selector
+const openQuickModelBtn=document.getElementById('open-quick-model');
+const quickModelBox=document.getElementById('quick-model-box');
+const customModelForm=document.getElementById('custom-model-form');
+const customModelInput=document.getElementById('custom-model-input');
+const quickModelStatus=document.getElementById('quick-model-status');
+
+if(openQuickModelBtn && quickModelBox){
+  openQuickModelBtn.onclick=()=>{
+    quickModelBox.hidden=!quickModelBox.hidden;
+    if(!quickModelBox.hidden && customModelInput) customModelInput.focus();
+  };
+}
+
+async function setQuickModel(modelName){
+  if(!modelName) return;
+  if(quickModelStatus) quickModelStatus.textContent=`Menerapkan model ${modelName}…`;
+  try {
+    let r=await api(`/i/${slug}/models/quick-set`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:modelName})
+    });
+    if(quickModelStatus) quickModelStatus.textContent=`✓ Berhasil memasang model ${modelName}!`;
+    refreshLiveState();
+    setTimeout(()=>{ if(quickModelBox) quickModelBox.hidden=true; if(quickModelStatus) quickModelStatus.textContent=''; }, 1500);
+  } catch(e) {
+    if(quickModelStatus) quickModelStatus.textContent=`Gagal: ${e.message}`;
+  }
+}
+
+if(customModelForm){
+  customModelForm.onsubmit=async e=>{
+    e.preventDefault();
+    let m=(customModelInput.value||'').trim();
+    if(m) await setQuickModel(m);
+  };
+}
+
+function toggleWaAllowedInput(){
+  let isBot=document.querySelector('input[name="wa_mode"]:checked')?.value==='bot';
+  let box=document.getElementById('wa-allowed-box');
+  if(box) box.hidden=!isBot;
+}
+
+let pairing='',poller;
+async function begin(kind){
+  let out=document.getElementById(kind+'-status');
+  out.textContent='Menyiapkan QR…';
+  
+  let payload={};
+  if(kind==='whatsapp'){
+    let mode=document.querySelector('input[name="wa_mode"]:checked')?.value || 'self-chat';
+    let allowed=document.getElementById('wa-allowed-input')?.value || '';
+    payload={mode, allowed_users: allowed};
+  }
+  
+  try{
+    let x=await api(`/i/${slug}/${kind}/onboarding`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    pairing=kind;
+    show(kind,x);
+    clearInterval(poller);
+    poller=setInterval(()=>poll(kind),2500);
+  }catch(e){
+    out.textContent=e.message;
+  }
+}
+
+
+function show(kind,x){
+  if(x.qr){
+    let q=document.getElementById('connect-qr');
+    q.src=x.qr;
+    q.hidden=false;
+  }
+  if(kind==='telegram'&&x.deep_link){
+    let a=document.getElementById('tg-link');
+    a.href=x.deep_link;
+    a.hidden=false;
+  }
+  document.getElementById(kind+'-status').textContent='Pindai QR lalu tunggu konfirmasi…';
+}
+
+async function poll(kind){
+  try{
+    let x=await api(`/i/${slug}/${kind}/onboarding/status`);
+    if(x.qr) show(kind,x);
+    if(x.status==='connected'){
+      clearInterval(poller);
+      let q=document.getElementById('connect-qr');
+      if(q) q.hidden=true;
+      let tgL=document.getElementById('tg-link');
+      if(tgL) tgL.hidden=true;
+      document.getElementById(kind+'-status').textContent=x.restart_started===false?'Tersimpan, tetapi gateway gagal restart. Tekan Restart gateway.':'Tersambung dan gateway sedang dimuat ulang.';
+      loadChannels();
+      setTimeout(loadChannels, 4000);
+      setTimeout(loadChannels, 10000);
+    } else if(['error','expired'].includes(x.status)){
+      clearInterval(poller);
+      document.getElementById(kind+'-status').textContent=x.error||'QR kedaluwarsa. Mulai lagi.';
+    }
+  } catch(e){
+    clearInterval(poller);
+    document.getElementById(kind+'-status').textContent=e.message;
+  }
+}
+
+// Kredensial tetap tersembunyi dalam akordion. Saat dibuka pertama kali, ambil data melalui API aman.
+let serviceCreds=document.querySelector('details.service-creds');
+if(serviceCreds){
+  serviceCreds.addEventListener('toggle', async function(){
+    let p=document.getElementById('creds');
+    if(!this.open || !p || p.dataset.loaded==='1') return;
+    try{
+      p.textContent='Memuat kredensial…';
+      let x=await api(`/i/${slug}/credentials`,{method:'POST'});
+      p.textContent=`Hermes: ${x.hermes_username} / ${x.hermes_password}\n9Router admin: ${x.router_password}`;
+      p.dataset.loaded='1';
+    }catch(err){
+      p.textContent=`Gagal memuat kredensial: ${err.message}`;
+    }
+  });
+}
+
+// Version check handler untuk user dashboard
+const checkVerBtn = document.getElementById('btn-check-version');
+const updateForm = document.getElementById('form-user-update');
+const verResult = document.getElementById('version-check-result');
+
+if(checkVerBtn){
+  checkVerBtn.onclick = async () => {
+    checkVerBtn.disabled = true;
+    checkVerBtn.textContent = 'Mengecek…';
+    if(verResult) { verResult.hidden = false; verResult.textContent = 'Memeriksa image instance vs master image terbaru…'; }
+    try {
+      let r = await fetch(`/i/${slug}/version-check`);
+      if(!r.ok) throw new Error('Gagal membaca info versi');
+      let data = await r.json();
+      if(data.has_update){
+        let details = [];
+        if(data.hermes_update){
+          details.push(`<div>• <b>Hermes:</b> Versi terpasang <code style="font-size:11.5px">${data.hermes_instance_image}</code> ➔ Master baru <code style="font-size:11.5px;color:#a7f3d0">${data.hermes_seed_image}</code></div>`);
+        }
+        if(data.router_update){
+          details.push(`<div>• <b>9Router:</b> Versi terpasang <code style="font-size:11.5px">${data.router_instance_image}</code> ➔ Master baru <code style="font-size:11.5px;color:#a7f3d0">${data.router_seed_image}</code></div>`);
+        }
+        if(verResult){
+          verResult.innerHTML = `
+            <div style="color:var(--warn);font-weight:600;margin-bottom:4px">⚠️ Tersedia Versi Baru!</div>
+            ${details.join('')}
+          `;
+        }
+        if(updateForm) updateForm.hidden = false;
+      } else {
+        if(verResult){
+          verResult.innerHTML = `
+            <div style="color:var(--ok);font-weight:600;margin-bottom:2px">✓ Instance Up to Date</div>
+            <div>Hermes (<code style="font-size:11.5px">${data.hermes_instance_image}</code>) &amp; 9Router (<code style="font-size:11.5px">${data.router_instance_image}</code>) sudah versi terbaru.</div>
+          `;
+        }
+        if(updateForm) updateForm.hidden = true;
+      }
+    } catch(err){
+      if(verResult) verResult.textContent = 'Error: ' + err.message;
+    } finally {
+      checkVerBtn.disabled = false;
+      checkVerBtn.textContent = '🔍 Cek Versi Terbaru';
+    }
+  };
+}
+const chatBox=document.getElementById('chat-box'),chatForm=document.getElementById('chat-form'),chatInput=document.getElementById('chat-input'),chatBtn=document.getElementById('chat-send-btn');
+const clearChatBtn=document.getElementById('clear-chat-btn');
+let chatHistory=[];
+
+if(clearChatBtn){
+  clearChatBtn.onclick=()=>{
+    chatHistory=[];
+    chatBox.innerHTML=`
+      <div class="chat-msg chat-bot">
+        <div class="chat-sender">Asisten AI</div>
+        <div class="chat-bubble">Sesi percakapan telah dibersihkan. Silakan kirim pesan baru untuk menguji model.</div>
+      </div>
+    `;
+    chatInput.focus();
+  };
+}
+
+
+async function sendChatMessage(){
+  let msg=(chatInput.value||'').trim();
+  if(!msg)return;
+  chatInput.value='';
+  chatInput.disabled=true;
+  chatBtn.disabled=true;
+  
+  // Tambahkan user message ke history lokal
+  chatHistory.push({role:'user',content:msg});
+  
+  // User bubble
+  let uDiv=document.createElement('div');
+  uDiv.className='chat-msg chat-user';
+  uDiv.innerHTML=`<div class="chat-sender">Anda</div><div class="chat-bubble">${escapeHtml(msg)}</div>`;
+  chatBox.appendChild(uDiv);
+  
+  // Bot loading bubble
+  let bDiv=document.createElement('div');
+  bDiv.className='chat-msg chat-bot';
+  bDiv.innerHTML=`<div class="chat-sender">Asisten AI</div><div class="chat-bubble chat-loading">Sedang merespon...</div>`;
+  chatBox.appendChild(bDiv);
+  chatBox.scrollTop=chatBox.scrollHeight;
+  
+  try{
+    let res=await api(`/i/${slug}/model/chat`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:chatHistory})
+    });
+    let replyText=res.reply||'(Tidak ada balasan teks)';
+    chatHistory.push({role:'assistant',content:replyText});
+    let bubble=bDiv.querySelector('.chat-bubble');
+    bubble.className='chat-bubble';
+    bubble.innerHTML=renderMarkdown(replyText);
+  }catch(err){
+    let bubble=bDiv.querySelector('.chat-bubble');
+    bubble.className='chat-bubble chat-error';
+    bubble.textContent='Error: '+(err.message||'Gagal mendapatkan respon dari model');
+  }finally{
+    chatInput.disabled=false;
+    chatBtn.disabled=false;
+    chatInput.focus();
+    chatBox.scrollTop=chatBox.scrollHeight;
+  }
+}
+
+if(chatBtn){
+  chatBtn.onclick=sendChatMessage;
+}
+
+if(chatInput){
+  chatInput.onkeydown=e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      sendChatMessage();
+    }
+  };
+}
+
+if(chatForm){
+  chatForm.onsubmit=e=>{
+    e.preventDefault();
+    sendChatMessage();
+    return false;
+  };
+}
+
+
+function renderMarkdown(src){
+  if(!src) return '';
+  let str = String(src);
+  
+  // 1. Code blocks: ```lang ... ```
+  let codeBlocks = [];
+  str = str.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function(_, lang, code){
+    let idx = codeBlocks.length;
+    codeBlocks.push(`<pre><code class="language-${escapeHtml(lang)}">${escapeHtml(code.trim())}</code></pre>`);
+    return `\x1A_CODE_${idx}_\x1A`;
+  });
+  
+  // 2. Inline code: `code`
+  let inlineCodes = [];
+  str = str.replace(/`([^`\n]+)`/g, function(_, code){
+    let idx = inlineCodes.length;
+    inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
+    return `\x1A_INLINE_${idx}_\x1A`;
+  });
+  
+  // 3. Escape HTML pada teks biasa
+  str = escapeHtml(str);
+  
+  // 4. Markdown Tables: | col1 | col2 |
+  str = str.replace(/((?:^|\n)\|.+?(?=\n\n|$))/gs, function(match){
+    let lines = match.trim().split('\n');
+    if(lines.length < 2) return match;
+    let html = '<table>';
+    let isHeader = true;
+    for(let i=0; i<lines.length; i++){
+      let line = lines[i].trim();
+      if(!line.startsWith('|') || !line.endsWith('|')) continue;
+      // Lewati baris separator (|---|---|)
+      if(/^\|(?:\s*:?-+:?\s*\|)+$/.test(line)){
+        isHeader = false;
+        continue;
+      }
+      let cells = line.split('|').slice(1, -1);
+      html += '<tr>';
+      let tag = isHeader ? 'th' : 'td';
+      cells.forEach(c => {
+        html += `<${tag}>${c.trim()}</${tag}>`;
+      });
+      html += '</tr>';
+      if(isHeader && i === 0 && lines.length > 1 && /^\|(?:\s*:?-+:?\s*\|)+$/.test(lines[1].trim())){
+        // header selesai
+      }
+    }
+    html += '</table>';
+    return '\n' + html + '\n';
+  });
+  
+  // 5. Headings: ### Title
+  str = str.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+  str = str.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+  str = str.replace(/^# (.*$)/gim, '<h2>$1</h2>');
+  
+  // 6. Bold & Italic: **bold**, *italic*, ***both***
+  str = str.replace(/\*\*\*(.*?)\*\*\*/g, '<b><i>$1</i></b>');
+  str = str.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+  str = str.replace(/\*(.*?)\*/g, '<i>$1</i>');
+  str = str.replace(/___(.*?)___/g, '<b><i>$1</i></b>');
+  str = str.replace(/__(.*?)__/g, '<b>$1</b>');
+  str = str.replace(/_(.*?)_/g, '<i>$1</i>');
+  
+  // 7. Blockquotes: > quote
+  str = str.replace(/^\&gt;\s?(.*$)/gim, '<blockquote>$1</blockquote>');
+  
+  // 8. Unordered Lists: - item atau * item
+  str = str.replace(/((?:^|\n)[ \t]*[-*]\s+.+)+/g, function(match){
+    let items = match.trim().split('\n');
+    let listHtml = '<ul>';
+    items.forEach(it => {
+      let content = it.replace(/^[ \t]*[-*]\s+/, '');
+      listHtml += `<li>${content}</li>`;
+    });
+    listHtml += '</ul>';
+    return '\n' + listHtml + '\n';
+  });
+  
+  // 9. Ordered Lists: 1. item
+  str = str.replace(/((?:^|\n)[ \t]*\d+\.\s+.+)+/g, function(match){
+    let items = match.trim().split('\n');
+    let listHtml = '<ol>';
+    items.forEach(it => {
+      let content = it.replace(/^[ \t]*\d+\.\s+/, '');
+      listHtml += `<li>${content}</li>`;
+    });
+    listHtml += '</ol>';
+    return '\n' + listHtml + '\n';
+  });
+  
+  // 10. Line breaks (ganti double newline menjadi paragraph atau <br>)
+  str = str.split(/\n{2,}/).map(p => {
+    let trimmed = p.trim();
+    if(!trimmed) return '';
+    if(trimmed.startsWith('<pre>') || trimmed.startsWith('<table>') || trimmed.startsWith('<ul>') || trimmed.startsWith('<ol>') || trimmed.startsWith('<blockquote>') || trimmed.startsWith('<h')) {
+      return trimmed;
+    }
+    return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
+  }).join('');
+  
+  // 11. Kembalikan placeholder inline code & code blocks
+  str = str.replace(/\x1A_INLINE_(\d+)_\x1A/g, (_, idx) => inlineCodes[idx] || '');
+  str = str.replace(/\x1A_CODE_(\d+)_\x1A/g, (_, idx) => codeBlocks[idx] || '');
+  
+  return str;
+}
+
+function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+
+</script>{% endblock %}

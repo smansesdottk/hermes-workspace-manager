@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="login-wrap">
+  <div class="card login-card" style="text-align:center">
+    <div class="err-code">{{ code }}</div>
+    <p style="margin:0 0 18px">{{ msg }}</p>
+    <a class="backlink" href="{{ url_for('dashboard') }}">← Kembali ke Workspace</a>
+  </div>
+</div>
+{% endblock %}

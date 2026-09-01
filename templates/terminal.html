@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block body %}
+<!-- XTerm.js Stylesheet -->
+<link rel="stylesheet" href="{{ url_for('static', filename='xterm/xterm.css') }}">
+
+<div class="hero">
+  <div>
+    <h1>{{ inst.slug }}</h1>
+    <p class="sub">Terminal Linux interaktif di dalam container Hermes pribadi Anda (terisolasi).</p>
+  </div>
+  <span id="inst-status-badge" class="badge b-{{'run' if inst.status=='running' else 'stop'}}">{{ inst.status }}</span>
+</div>
+
+<!-- Submenu Tab Navigasi -->
+<div class="nav-tabs-bar">
+  <a class="nav-tab-item {{ 'active' if active_tab=='dashboard' else '' }}" href="{{ url_for('instance_page', slug=inst.slug) }}">📊 Dasbor Utama</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='terminal' else '' }}" href="{{ url_for('instance_terminal_page', slug=inst.slug) }}">🖥️ Terminal Instance</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='cron' else '' }}" href="{{ url_for('instance_cron_page', slug=inst.slug) }}">⏰ Tugas Terjadwal (Cron)</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='settings' else '' }}" href="{{ url_for('instance_settings_page', slug=inst.slug) }}">⚙️ Menu Setting</a>
+</div>
+
+<!-- Terminal Container Card -->
+<section class="card" style="padding:0;overflow:hidden;background:#0d1117;border:1px solid var(--line2);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.6)">
+  <!-- Header Bar Terminal -->
+  <div style="background:#161b22;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;gap:6px">
+        <span style="width:11px;height:11px;border-radius:50%;background:#fa7777;display:inline-block"></span>
+        <span style="width:11px;height:11px;border-radius:50%;background:#f5bf58;display:inline-block"></span>
+        <span style="width:11px;height:11px;border-radius:50%;background:#51d39b;display:inline-block"></span>
+      </div>
+      <b style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#c9d1d9">
+        hermes@{{ inst.slug }}:/opt/data
+      </b>
+      <span class="badge b-run" style="font-size:10px;padding:2px 8px" id="term-status-badge">connecting…</span>
+    </div>
+
+    <!-- Tombol Kontrol Cepat Terminal -->
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button type="button" class="ghost" id="term-ctrl-c" style="padding:4px 9px;font-size:11.5px;font-family:'JetBrains Mono',monospace" title="Kirim signal SIGINT (Ctrl+C)">Ctrl+C</button>
+      <button type="button" class="ghost" id="term-clear-btn" style="padding:4px 9px;font-size:11.5px;font-family:'JetBrains Mono',monospace" title="Bersihkan layar">Clear</button>
+      <button type="button" class="ghost" id="term-reconnect-btn" style="padding:4px 9px;font-size:11.5px;color:var(--acc2);border-color:rgba(130,143,255,.3)" title="Buka sesi baru">Restart Terminal</button>
+    </div>
+  </div>
+
+  <!-- Terminal Display Surface (Native XTerm.js Canvas/DOM) -->
+  <div id="xterm-wrapper" style="padding:12px;min-height:480px;height:65vh;background:#05070a;overflow:hidden"></div>
+</section>
+
+<!-- Keterangan & Shortcut -->
+<div class="card" style="margin-top:16px;background:rgba(255,255,255,.015)">
+  <h3 style="font-size:13.5px;margin-bottom:6px">💡 Informasi &amp; Panduan Terminal Instance</h3>
+  <ul style="margin:0;padding-left:20px;font-size:12.5px;color:var(--dim);line-height:1.6">
+    <li>Terminal ini terhubung langsung ke sesi PTY Bash di dalam container <code>dockerman-{{ inst.slug }}-hermes</code>.</li>
+    <li>Mendukung penuh curses, arrow keys, tab completion, dan perintah interaktif: <code>hermes setup model</code>, <code>hermes cron list</code>, <code>python3</code>, <code>pip</code>, dll.</li>
+    <li>Seluruh proses terisolasi di dalam container dan tidak dapat mengakses server host maupun instance pengguna lain.</li>
+  </ul>
+</div>
+
+<!-- XTerm.js Scripts -->
+<script src="{{ url_for('static', filename='xterm/xterm.js') }}"></script>
+<script src="{{ url_for('static', filename='xterm/addon-fit.js') }}"></script>
+
+<script>
+(function(){
+  const csrf = document.querySelector('[name="csrf-token"]').content;
+  const slug = '{{ inst.slug }}';
+  const termWrapper = document.getElementById('xterm-wrapper');
+  const ctrlCBtn = document.getElementById('term-ctrl-c');
+  const clearBtn = document.getElementById('term-clear-btn');
+  const reconnectBtn = document.getElementById('term-reconnect-btn');
+  const statusBadge = document.getElementById('term-status-badge');
+
+  let currentRunId = '';
+  let pollInterval = null;
+  let term = null;
+  let fitAddon = null;
+
+  async function apiPost(path, body={}){
+    let r = await fetch(path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf
+      },
+      body: JSON.stringify(body)
+    });
+    return await r.json();
+  }
+
+  function initXterm(){
+    term = new Terminal({
+      cursorBlink: true,
+      cursorStyle: 'block',
+      fontFamily: "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace",
+      fontSize: 13.5,
+      lineHeight: 1.35,
+      theme: {
+        background: '#05070a',
+        foreground: '#e6edf3',
+        cursor: '#58a6ff',
+        selectionBackground: 'rgba(56, 139, 253, 0.4)',
+        black: '#484f58',
+        red: '#fa7777',
+        green: '#51d39b',
+        yellow: '#f5bf58',
+        blue: '#828fff',
+        magenta: '#d8b4fe',
+        cyan: '#22d3ee',
+        white: '#ffffff',
+        brightBlack: '#6e7681',
+        brightRed: '#ffa198',
+        brightGreen: '#7ee787',
+        brightYellow: '#ffdf5d',
+        brightBlue: '#a5d6ff',
+        brightMagenta: '#e2c5ff',
+        brightCyan: '#56d4dd',
+        brightWhite: '#ffffff'
+      }
+    });
+
+    if(window.FitAddon && window.FitAddon.FitAddon){
+      fitAddon = new window.FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+    }
+
+    term.open(termWrapper);
+    if(fitAddon) {
+      setTimeout(() => fitAddon.fit(), 100);
+    }
+
+    // Input keyboard langsung diteruskan ke PTY stream
+    term.onData(data => {
+      if(!currentRunId) return;
+      apiPost(`/i/${slug}/terminal/write/${currentRunId}`, {input: data});
+    });
+
+    term.focus();
+  }
+
+  async function startTerminalSession(){
+    if(statusBadge) {
+      statusBadge.textContent = 'connecting…';
+      statusBadge.className = 'badge b-part';
+    }
+    try {
+      let res = await apiPost(`/i/${slug}/terminal/session`);
+      if(res.ok && res.id){
+        currentRunId = res.id;
+        if(statusBadge) {
+          statusBadge.textContent = 'connected';
+          statusBadge.className = 'badge b-run';
+        }
+        clearInterval(pollInterval);
+        pollInterval = setInterval(pollTerminalOutput, 150);
+        pollTerminalOutput();
+        sendResize();
+      } else {
+        term.write('\r\n\x1b[31m[Gagal membuka terminal: ' + (res.error || 'Unknown error') + ']\x1b[0m\r\n');
+        if(statusBadge) { statusBadge.textContent = 'error'; statusBadge.className = 'badge b-err'; }
+      }
+    } catch(err){
+      term.write('\r\n\x1b[31m[Error koneksi: ' + err.message + ']\x1b[0m\r\n');
+      if(statusBadge) { statusBadge.textContent = 'error'; statusBadge.className = 'badge b-err'; }
+    }
+  }
+
+  async function pollTerminalOutput(){
+    if(!currentRunId) return;
+    try {
+      let r = await fetch(`/i/${slug}/terminal/read/${currentRunId}`);
+      if(!r.ok) return;
+      let data = await r.json();
+      if(data.output && term){
+        term.write(data.output);
+      }
+      if(data.done){
+        clearInterval(pollInterval);
+        currentRunId = '';
+        if(statusBadge) { statusBadge.textContent = 'closed'; statusBadge.className = 'badge b-stop'; }
+      }
+    } catch(e){}
+  }
+
+  function sendResize(){
+    if(!currentRunId || !term) return;
+    if(fitAddon) fitAddon.fit();
+    apiPost(`/i/${slug}/terminal/resize/${currentRunId}`, {
+      rows: term.rows || 24,
+      cols: term.cols || 80
+    });
+  }
+
+  if(ctrlCBtn){
+    ctrlCBtn.onclick = () => {
+      if(currentRunId) apiPost(`/i/${slug}/terminal/write/${currentRunId}`, {input: '\x03'});
+      if(term) term.focus();
+    };
+  }
+
+  if(clearBtn){
+    clearBtn.onclick = () => {
+      if(term) term.clear();
+      if(currentRunId) apiPost(`/i/${slug}/terminal/write/${currentRunId}`, {input: 'clear\r'});
+      if(term) term.focus();
+    };
+  }
+
+  if(reconnectBtn){
+    reconnectBtn.onclick = async () => {
+      if(currentRunId){
+        try { await apiPost(`/i/${slug}/terminal/stop/${currentRunId}`); } catch(e){}
+      }
+      clearInterval(pollInterval);
+      currentRunId = '';
+      if(term) term.reset();
+      startTerminalSession();
+    };
+  }
+
+  window.addEventListener('resize', sendResize);
+
+  // Inisialisasi
+  initXterm();
+  startTerminalSession();
+})();
+</script>
+{% endblock %}

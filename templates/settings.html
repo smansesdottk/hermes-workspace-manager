@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="hero"><div><h1>{{ inst.slug }}</h1><p class="sub">Kelola Hermes, model, dan channel pesan dari satu halaman.</p></div><span id="inst-status-badge" class="badge b-{{'run' if inst.status=='running' else 'stop'}}">{{ inst.status }}</span></div>
+
+<!-- Peringatan Masa Aktif di Tab Setting (Jika Mendekati Habis <= 3 Hari) -->
+{% if d.expiry and d.expiry.warning and not d.expiry.is_expired %}
+<div class="flash" style="background:rgba(245,191,88,.12);border-color:rgba(245,191,88,.35);color:#ffd98a;margin-bottom:16px">
+  ⚠️ <b>Pemberitahuan Masa Aktif:</b> Masa berlangganan instance ini akan berakhir dalam <b>{{ d.expiry.label }}</b>. Harap hubungi admin untuk perpanjangan.
+</div>
+{% endif %}
+
+<!-- Submenu Tab Navigasi -->
+<div class="nav-tabs-bar">
+  <a class="nav-tab-item {{ 'active' if active_tab=='dashboard' else '' }}" href="{{ url_for('instance_page', slug=inst.slug) }}">📊 Dasbor Utama</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='terminal' else '' }}" href="{{ url_for('instance_terminal_page', slug=inst.slug) }}">🖥️ Terminal Instance</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='cron' else '' }}" href="{{ url_for('instance_cron_page', slug=inst.slug) }}">⏰ Tugas Terjadwal (Cron)</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='settings' else '' }}" href="{{ url_for('instance_settings_page', slug=inst.slug) }}">⚙️ Menu Setting</a>
+</div>
+
+<div class="grid2">
+  <!-- Persona & System Prompt -->
+  <section class="card">
+    <h2>🧠 Persona &amp; Instruksi Khusus</h2>
+    <p class="kv">Tentukan kepribadian, instruksi peran, atau gaya bahasa asisten Anda (tersimpan di <code>SOUL.md</code>).</p>
+    <form method="post" action="{{url_for('instance_update_soul',slug=inst.slug)}}" style="margin-top:14px">
+      <textarea name="soul" rows="7" placeholder="Contoh: Anda adalah asisten AI profesional yang ramah. Jawab selalu dalam bahasa Indonesia yang ringkas dan jelas." style="width:100%;font:inherit;background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--tx);resize:vertical">{{ d.soul }}</textarea>
+      <div class="btnrow" style="margin-top:10px">
+        <button>Simpan Persona</button>
+      </div>
+    </form>
+  </section>
+
+</div>
+
+<div class="grid2">
+  <!-- Backup Data -->
+  <section class="card">
+    <h2>📥 Cadangkan Data (Backup)</h2>
+    <p class="kv">Unduh seluruh file percakapan, memory, database sesi, dan konfigurasi workspace ke dalam file arsip <code>.tar.gz</code>.</p>
+    <div style="margin-top:16px">
+      <a class="btn-primary" href="{{url_for('instance_backup',slug=inst.slug)}}" style="display:inline-flex;align-items:center;gap:6px;font-size:13.5px;padding:9px 16px">📥 Download Backup (.tar.gz)</a>
+    </div>
+    <p class="kv foot-note">Backup bersifat portable dan dapat dipulihkan ke instance mana saja sewaktu-waktu.</p>
+  </section>
+
+  <!-- Restore Data -->
+  <section class="card">
+    <h2>📤 Pulihkan Data (Restore)</h2>
+    <p class="kv">Unggah file backup <code>.tar.gz</code> untuk memulihkan seluruh data dan konfigurasi workspace.</p>
+    <form method="post" action="{{url_for('instance_restore',slug=inst.slug)}}" enctype="multipart/form-data" style="margin-top:14px" onsubmit="return confirm('Pulihkan data dari arsip ini? Data yang ada akan ditimpa dan instance dimuat ulang.')">
+      <input type="file" name="backup_file" accept=".tar.gz,.tgz" required style="font-size:13px;padding:8px;width:100%;margin-bottom:10px;background:rgba(0,0,0,.3)">
+      <button class="warnb" style="padding:9px 16px">Pulihkan Data (Restore)</button>
+    </form>
+    <p class="kv foot-note">Setelah diekstrak, sistem akan otomatis melakukan restart instance agar konfigurasi baru aktif.</p>
+  </section>
+</div>
+
+<script>
+const csrf=document.querySelector('[name="csrf-token"]').content,slug='{{inst.slug}}';
+async function api(path,opt={}){
+  opt.headers={...(opt.headers||{}),'X-CSRFToken':csrf};
+  let r=await fetch(path,opt);
+  let text=await r.text();
+  let x;
+  try {
+    x=JSON.parse(text);
+  } catch(e) {
+    if(!r.ok) throw Error(`Server error (HTTP ${r.status})`);
+    return text;
+  }
+  if(!r.ok) throw Error(x.error||x.detail||'Permintaan gagal');
+  return x;
+}
+</script>
+{% endblock %}

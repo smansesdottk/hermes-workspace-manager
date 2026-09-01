@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="hero"><div><h1>{{ inst.slug }}</h1><p class="sub">Kelola tugas otonom terjadwal (Cron Jobs) yang berjalan otomatis di background.</p></div><span id="inst-status-badge" class="badge b-{{'run' if inst.status=='running' else 'stop'}}">{{ inst.status }}</span></div>
+
+<!-- Submenu Tab Navigasi -->
+<div class="nav-tabs-bar">
+  <a class="nav-tab-item {{ 'active' if active_tab=='dashboard' else '' }}" href="{{ url_for('instance_page', slug=inst.slug) }}">📊 Dasbor Utama</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='terminal' else '' }}" href="{{ url_for('instance_terminal_page', slug=inst.slug) }}">🖥️ Terminal Instance</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='cron' else '' }}" href="{{ url_for('instance_cron_page', slug=inst.slug) }}">⏰ Tugas Terjadwal (Cron)</a>
+  <a class="nav-tab-item {{ 'active' if active_tab=='settings' else '' }}" href="{{ url_for('instance_settings_page', slug=inst.slug) }}">⚙️ Menu Setting</a>
+</div>
+
+<!-- Daftar Tugas Terjadwal Aktif -->
+<section class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div>
+      <h2 style="margin:0 0 4px">⏰ Daftar Tugas Terjadwal (Cron Jobs)</h2>
+      <p class="kv" style="margin:0;font-size:12.5px">Tugas otonom yang dijalankan secara otomatis oleh Hermes Agent sesuai jadwal.</p>
+    </div>
+    <span class="badge" style="font-size:11.5px">{{ cron_jobs|length }} Tugas Terdaftar</span>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nama &amp; Instruksi Tugas</th>
+          <th>Jadwal (Cron)</th>
+          <th>Target Kirim</th>
+          <th>Status Jadwal</th>
+          <th>Eksekusi Terakhir</th>
+          <th style="text-align:right">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if cron_jobs %}
+          {% for j in cron_jobs %}
+          <tr>
+            <td>
+              <b style="font-size:13.5px;color:#fff">{{ j.name or j.id }}</b>
+              <div class="kv" style="font-size:12px;margin-top:3px;max-width:320px;line-height:1.4">
+                {{ j.prompt }}
+              </div>
+            </td>
+            <td>
+              <code style="font-size:12px">{{ j.schedule_display or j.schedule }}</code>
+              {% if j.next_run_at %}
+                <div class="kv" style="font-size:11px;margin-top:2px">Next: {{ j.next_run_at[:16].replace('T', ' ') }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge" style="font-size:11px">{{ j.deliver or 'origin' }}</span>
+            </td>
+            <td>
+              {% if j.enabled %}
+                <span class="badge b-run" style="font-size:11px">Aktif</span>
+              {% else %}
+                <span class="badge b-stop" style="font-size:11px">Dijeda</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if j.last_exec_status %}
+                <span class="badge {{ 'b-run' if j.last_exec_status=='completed' else ('b-err' if j.last_exec_status=='failed' else 'b-part') }}" style="font-size:11px">
+                  {{ j.last_exec_status }}
+                </span>
+                {% if j.last_exec_time %}
+                  <div class="kv" style="font-size:11px;margin-top:2px">{{ j.last_exec_time[:16].replace('T', ' ') }}</div>
+                {% endif %}
+              {% else %}
+                <span class="kv" style="font-size:11.5px">Belum dieksekusi</span>
+              {% endif %}
+            </td>
+            <td class="cell-actions">
+              <!-- Toggle Pause / Resume -->
+              <form method="post" action="{{ url_for('instance_cron_toggle', slug=inst.slug, job_id=j.id) }}" style="display:inline">
+                {% if j.enabled %}
+                  <input type="hidden" name="enable" value="0">
+                  <button type="submit" class="ghost" style="padding:4px 8px;font-size:11.5px;color:var(--warn);border-color:rgba(245,191,88,.3)">Jeda</button>
+                {% else %}
+                  <input type="hidden" name="enable" value="1">
+                  <button type="submit" class="ghost" style="padding:4px 8px;font-size:11.5px;color:var(--ok);border-color:rgba(16,185,129,.3)">Aktifkan</button>
+                {% endif %}
+              </form>
+
+              <!-- Hapus Job -->
+              <form method="post" action="{{ url_for('instance_cron_delete', slug=inst.slug, job_id=j.id) }}" style="display:inline" onsubmit="return confirm('Hapus tugas terjadwal ini?')">
+                <button type="submit" class="danger" style="padding:4px 8px;font-size:11.5px">Hapus</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty" style="text-align:center;padding:24px 0">
+              Belum ada tugas terjadwal yang dibuat untuk instance ini.<br>
+              <span class="kv" style="font-size:12px">Anda bisa membuat tugas baru lewat form di bawah atau langsung melalui chat WhatsApp/Telegram.</span>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Form Buat Tugas Baru -->
+<section class="card" style="margin-top:18px">
+  <h2>➕ Buat Tugas Terjadwal Baru</h2>
+  <p class="kv">Tambahkan jadwal otomatis untuk Hermes Agent tanpa perlu mengetik sintaks CLI rumit.</p>
+
+  <form method="post" action="{{ url_for('instance_cron_create', slug=inst.slug) }}" style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+    <div class="grid2">
+      <div>
+        <label class="kv" style="font-size:12px;display:block;margin-bottom:4px">Nama Tugas:</label>
+        <input name="name" placeholder="Contoh: Rangkum Berita Harian" required style="width:100%">
+      </div>
+      <div>
+        <label class="kv" style="font-size:12px;display:block;margin-bottom:4px">Jadwal (Cron / Interval):</label>
+        <input name="schedule" placeholder="Contoh: 0 8 * * * (Tiap jam 8 pagi) atau 30m / every 2h" required style="width:100%">
+        <div class="kv" style="font-size:11px;margin-top:3px">Format: <code>0 8 * * *</code> (harian), <code>every 2h</code> (tiap 2 jam), <code>30m</code> (tiap 30 menit).</div>
+      </div>
+    </div>
+
+    <div>
+      <label class="kv" style="font-size:12px;display:block;margin-bottom:4px">Instruksi Prompt untuk Asisten AI:</label>
+      <textarea name="prompt" rows="3" placeholder="Contoh: Cari berita teknologi dan AI terbaru hari ini, rangkum dalam 3 poin penting, dan kirimkan ke chat." required style="width:100%;font:inherit;background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--tx);resize:vertical"></textarea>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label class="kv" style="font-size:12px;display:block;margin-bottom:4px">Kirimkan Hasil Ke (Delivery):</label>
+        <select name="deliver" style="width:100%;background-color:#12151a;color:#f7f8f8">
+          <option value="origin">Chat Asal (WhatsApp / Telegram)</option>
+          <option value="local">Hanya Simpan Lokal (Tanpa Notifikasi Chat)</option>
+          <option value="all">Kirim ke Seluruh Channel yang Terhubung</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button type="submit" style="width:100%;padding:10px">➕ Simpan &amp; Aktifkan Jadwal</button>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}

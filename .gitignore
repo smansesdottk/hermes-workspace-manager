@@ -1,0 +1,26 @@
+# --- RAHASIA: jangan pernah commit ---
+.session-secret
+panel.db
+panel.db-shm
+panel.db-wal
+*.log
+
+# --- Data & state instance pengguna (berisi password, API key, JWT) ---
+instances/
+tunnel-logs/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# --- Vendor (qrcode/pillow bisa di-install dari requirements.txt) ---
+vendor/
+
+# --- Editor / OS ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
