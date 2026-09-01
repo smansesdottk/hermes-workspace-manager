@@ -13,9 +13,15 @@ if exist "%ProgramFiles%\Docker\Docker\resources\bin\docker.exe" (
 )
 
 if not exist ".venv\Scripts\activate.bat" (
-
-    echo Virtual environment belum disiapkan. Menjalankan installer terlebih dahulu...
+    echo [INFO] Virtual environment belum disiapkan. Menjalankan installer terlebih dahulu...
     call install.bat
+)
+
+if not exist ".venv\Scripts\activate.bat" (
+    echo [ERROR] File .venv\Scripts\activate.bat tidak ditemukan.
+    echo Harap jalankan install.bat terlebih dahulu.
+    pause
+    exit /b 1
 )
 
 call ".venv\Scripts\activate.bat"
@@ -25,25 +31,34 @@ echo    Hermes Workspace Manager Sedang Berjalan (Port: 8899)
 echo ================================================================
 echo.
 echo Akses Web: http://127.0.0.1:8899
-echo Membuka browser default Windows...
+echo.
+
+REM Jalankan server langsung via Python di dalam venv (anti-crash waitress executable)
+echo [INFO] Menjalankan server aplikasi di http://127.0.0.1:8899 ...
+echo [INFO] Tekan Ctrl+C untuk menghentikan server.
+echo.
+
+REM Buka browser di background
 start http://127.0.0.1:8899
 
-REM Jalankan via waitress WSGI server produksi untuk Windows jika ada
-python -c "import waitress" >nul 2>nul
-if %errorlevel% equ 0 (
-    echo [INFO] Menjalankan server via Waitress (Produksi)...
-    waitress-serve --listen=127.0.0.1:8899 app:app
-) else (
-    echo [INFO] Menjalankan server via Flask Development Server...
+python -c "import waitress, app; waitress.serve(app.app, host='127.0.0.1', port=8899)" 2> "%TEMP%\hermes_server_err.log"
+
+if %errorlevel% neq 0 (
+    echo [INFO] Mencoba fallback ke Flask Server...
     python app.py
 )
 
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] Server berhenti secara tidak normal (Error Code: %errorlevel%).
+    echo ================================================================
+    echo [ERROR] Server berhenti dengan error code: %errorlevel%
+    if exist "%TEMP%\hermes_server_err.log" (
+        echo Detail Error:
+        type "%TEMP%\hermes_server_err.log"
+    )
+    echo ================================================================
     echo.
 )
 
+echo Server telah berhenti.
 pause
-
-
