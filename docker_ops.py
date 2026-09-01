@@ -34,9 +34,29 @@ except ImportError:
     fcntl = None
     _HAS_PTY = False
 
+def _find_docker_bin() -> str:
+    """Mencari lokasi biner docker secara cerdas lintas platform."""
+    # 1. Cek di PATH sistem
+    which_docker = shutil.which("docker")
+    if which_docker:
+        return which_docker
+    # 2. Cek path standar di Windows jika belum masuk ke PATH
+    if sys.platform == "win32":
+        win_candidates = [
+            os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Docker", "Docker", "resources", "bin", "docker.exe"),
+            os.path.join(os.environ.get("ProgramW6432", r"C:\Program Files"), "Docker", "Docker", "resources", "bin", "docker.exe"),
+            os.path.join(os.environ.get("LOCALAPPDATA", r"C:\Users\Default\AppData\Local"), "Docker", "resources", "bin", "docker.exe"),
+        ]
+        for c in win_candidates:
+            if os.path.isfile(c):
+                return c
+        return "docker"
+    # 3. Default path di Linux / macOS
+    return "/usr/bin/docker" if os.path.isfile("/usr/bin/docker") else "docker"
+
 SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{1,30}$")
-# Deteksi biner Docker secara dinamis lintas platform (Linux / macOS / Windows)
-DOCKER_BIN = shutil.which("docker") or ("/usr/bin/docker" if sys.platform != "win32" else "docker")
+DOCKER_BIN = _find_docker_bin()
+
 
 
 

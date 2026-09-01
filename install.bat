@@ -31,14 +31,18 @@ echo.
 echo [2/4] Memeriksa Docker Desktop...
 where docker >nul 2>nul
 if %errorlevel% neq 0 (
-    echo.
-    echo [PERINGATAN] Perintah 'docker' belum terdaftar di PATH.
-    echo Pastikan Docker Desktop sudah terinstal dan sedang dibuka/berjalan.
-    echo Jika Docker baru saja diinstal, silakan restart komputer atau buka Docker Desktop.
-    echo.
+    if exist "%ProgramFiles%\Docker\Docker\resources\bin\docker.exe" (
+        echo [INFO] Docker terdeteksi di Program Files: "%ProgramFiles%\Docker\Docker\resources\bin\docker.exe"
+        set "PATH=%ProgramFiles%\Docker\Docker\resources\bin;%PATH%"
+    ) else (
+        echo [PERINGATAN] Perintah 'docker' belum ditemukan di PATH Windows.
+        echo Panel web tetap bisa dijalankan, namun untuk membuat ^& menjalankan instance,
+        echo pastikan aplikasi Docker Desktop sudah terinstal dan dalam keadaan Running/Buka.
+    )
 ) else (
     docker --version
 )
+
 
 REM 3. Setup Virtual Environment
 echo.

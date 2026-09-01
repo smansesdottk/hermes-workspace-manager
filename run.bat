@@ -7,7 +7,13 @@ color 0A
 
 cd /d "%~dp0"
 
+REM Tambahkan path default Docker Desktop Windows jika belum ada di PATH
+if exist "%ProgramFiles%\Docker\Docker\resources\bin\docker.exe" (
+    set "PATH=%ProgramFiles%\Docker\Docker\resources\bin;%PATH%"
+)
+
 if not exist ".venv\Scripts\activate.bat" (
+
     echo Virtual environment belum disiapkan. Menjalankan installer terlebih dahulu...
     call install.bat
 )
