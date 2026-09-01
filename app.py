@@ -628,10 +628,19 @@ def instance_links(slug: str):
     hermes_up = docker_ops.ps_one(slug, "hermes")
     router_up = docker_ops.ps_one(slug, "9router")
     active_model = manager.get_instance_active_model(slug)
+    
+    # URL default lokal jika tunnel cloudflared tidak aktif / di lingkungan Windows/lokal
+    h_url = latest.get("hermes_url", "")
+    r_url = latest.get("router_url", "")
+    if not h_url:
+        h_url = f"http://127.0.0.1:{inst['hermes_port']}"
+    if not r_url:
+        r_url = f"http://127.0.0.1:{inst['router_port']}"
+
     return {
         "status": manager.refresh_status(slug),
-        "hermes_url": latest.get("hermes_url", ""),
-        "router_url": latest.get("router_url", ""),
+        "hermes_url": h_url,
+        "router_url": r_url,
         "hermes_up": hermes_up,
         "router_up": router_up,
         "model": active_model.get("model", ""),
@@ -642,6 +651,7 @@ def instance_links(slug: str):
         "logs_hermes": docker_ops.logs(slug, "hermes", 100),
         "logs_router": docker_ops.logs(slug, "9router", 100),
     }
+
 
 
 

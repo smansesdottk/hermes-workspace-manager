@@ -20,8 +20,21 @@
 <div class="grid2">
 <section class="card">
   <h2>Akses layanan</h2>
-  <p id="hermes-link">{% if inst.hermes_url %}<a class="svc-link" href="{{inst.hermes_url}}" target="_blank" rel="noopener">Buka Hermes ↗</a>{% else %}Menyiapkan alamat Hermes…{% endif %}</p>
-  <p id="router-link">{% if inst.router_url %}<a class="svc-link" href="{{inst.router_url}}/dashboard" target="_blank" rel="noopener">Buka 9Router ↗</a>{% else %}Menyiapkan alamat 9Router…{% endif %}</p>
+  <p id="hermes-link">
+    {% if inst.hermes_url %}
+      <a class="svc-link" href="{{inst.hermes_url}}" target="_blank" rel="noopener">Buka Hermes ↗</a>
+    {% else %}
+      <a class="svc-link" href="http://127.0.0.1:{{inst.hermes_port}}" target="_blank" rel="noopener">Buka Hermes (Lokal :{{inst.hermes_port}}) ↗</a>
+    {% endif %}
+  </p>
+  <p id="router-link">
+    {% if inst.router_url %}
+      <a class="svc-link" href="{{inst.router_url}}/dashboard" target="_blank" rel="noopener">Buka 9Router ↗</a>
+    {% else %}
+      <a class="svc-link" href="http://127.0.0.1:{{inst.router_port}}/dashboard" target="_blank" rel="noopener">Buka 9Router (Lokal :{{inst.router_port}}) ↗</a>
+    {% endif %}
+  </p>
+
 
   <!-- Kredensial ditempatkan di antara link layanan dan kontrol instance; data tetap tersembunyi di dalam akordion -->
   <details class="service-creds" style="margin:14px 0;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02);padding:0 12px">
