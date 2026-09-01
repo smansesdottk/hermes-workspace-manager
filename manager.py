@@ -217,7 +217,26 @@ CREATE TABLE IF NOT EXISTS pricing_plans(
             )
 
 
+        # Buat akun admin default jika database baru pertama kali diinisialisasi
+        user_count = c.execute("SELECT COUNT(*) as count FROM users").fetchone()["count"]
+        if user_count == 0:
+            from werkzeug.security import generate_password_hash
+            default_admin = "admin"
+            default_pass = "admin123"
+            h = generate_password_hash(default_pass)
+            c.execute(
+                "INSERT INTO users (username, password_hash, role, is_active, created_at) VALUES (?, ?, 'admin', 1, ?)",
+                (default_admin, h, now())
+            )
+            print(f"\n========================================================")
+            print(f" [INFO] Akun Administrator Pertama Dibuat:")
+            print(f"        Username : {default_admin}")
+            print(f"        Password : {default_pass}")
+            print(f"        (Ganti password Anda setelah login di menu Akun)")
+            print(f"========================================================\n")
+
         # Migrasi ringan untuk database yang dibuat sebelum kolom tunnel/plan ada.
+
         columns = {r["name"] for r in c.execute("PRAGMA table_info(instances)")}
         for name, default in (("hermes_url", "''"), ("router_url", "''"),
                               ("cpu_limit", "'1.00'"), ("memory_limit", "'1500m'"),

@@ -8,13 +8,19 @@
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="fld">Username
-        <input name="username" autocomplete="username" required autofocus>
+        <input name="username" autocomplete="username" required autofocus placeholder="admin">
       </label>
       <label class="fld">Password
-        <input name="password" type="password" autocomplete="current-password" required>
+        <input name="password" type="password" autocomplete="current-password" required placeholder="••••••••">
       </label>
       <button style="width:100%">Masuk</button>
     </form>
+    <div style="margin-top:16px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px dashed var(--bdr);border-radius:6px;font-size:11.5px;color:var(--muted);text-align:left;line-height:1.5">
+      💡 <b>Instalasi Baru?</b><br>
+      Gunakan akun bawaan: Username <code>admin</code> · Password <code>admin123</code><br>
+      <span style="opacity:0.8">(Dapat diganti kapan saja setelah login)</span>
+    </div>
   </div>
 </div>
+
 {% endblock %}
