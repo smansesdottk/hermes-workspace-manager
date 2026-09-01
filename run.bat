@@ -7,34 +7,37 @@ color 0A
 
 cd /d "%~dp0"
 
-if not exist ".venv" (
-    echo Virtual environment belum disiapkan. Menjalankan installer...
+if not exist ".venv\Scripts\activate.bat" (
+    echo Virtual environment belum disiapkan. Menjalankan installer terlebih dahulu...
     call install.bat
 )
 
-call .venv\Scripts\activate.bat
+call ".venv\Scripts\activate.bat"
 
 echo ================================================================
 echo    Hermes Workspace Manager Sedang Berjalan (Port: 8899)
 echo ================================================================
 echo.
-echo Membuka browser: http://127.0.0.1:8899 ...
+echo Akses Web: http://127.0.0.1:8899
+echo Membuka browser default Windows...
 start http://127.0.0.1:8899
 
 REM Jalankan via waitress WSGI server produksi untuk Windows jika ada
-where waitress-serve >nul 2>nul
+python -c "import waitress" >nul 2>nul
 if %errorlevel% equ 0 (
-    echo Menjalankan server via Waitress...
+    echo [INFO] Menjalankan server via Waitress (Produksi)...
     waitress-serve --listen=127.0.0.1:8899 app:app
 ) else (
-    echo Menjalankan server via Flask...
+    echo [INFO] Menjalankan server via Flask Development Server...
     python app.py
 )
 
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] Server berhenti dengan error code %errorlevel%.
+    echo [ERROR] Server berhenti secara tidak normal (Error Code: %errorlevel%).
+    echo.
 )
 
 pause
+
 

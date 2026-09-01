@@ -42,12 +42,19 @@ import manager
 app = Flask(__name__)
 _secret_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".session-secret")
 if not os.path.exists(_secret_path):
-    fd = os.open(_secret_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "w") as f:
-        f.write(__import__("secrets").token_urlsafe(48))
+    try:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = 0o600 if sys.platform != "win32" else 0o666
+        fd = os.open(_secret_path, flags, mode)
+        with os.fdopen(fd, "w") as f:
+            f.write(secrets.token_urlsafe(48))
+    except Exception:
+        with open(_secret_path, "w") as f:
+            f.write(secrets.token_urlsafe(48))
 with open(_secret_path) as f:
     _stored_secret = f.read().strip()
 app.secret_key = os.environ.get("DM_SECRET_KEY") or _stored_secret
+
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
                   # SSH tunnel http://127.0.0.1:8899 tetap didukung; panel publik
                   # berada di HTTPS lewat Cloudflare.

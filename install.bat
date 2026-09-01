@@ -16,8 +16,11 @@ REM 1. Cek Python
 echo [1/4] Memeriksa Python...
 where python >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] Python tidak ditemukan. Harap unduh dan instal Python dari python.org
-    echo Pastikan opsi "Add python.exe to PATH" dicentang saat instalasi.
+    echo.
+    echo [ERROR] Python tidak ditemukan di sistem Windows Anda.
+    echo Harap unduh dan instal Python dari https://www.python.org/downloads/
+    echo PENTING: Centang opsi "Add python.exe to PATH" saat instalasi!
+    echo.
     pause
     exit /b 1
 )
@@ -28,8 +31,11 @@ echo.
 echo [2/4] Memeriksa Docker Desktop...
 where docker >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [PERINGATAN] Docker CLI tidak terdeteksi di PATH.
-    echo Pastikan Docker Desktop sudah terpasang dan berjalan di Windows Anda.
+    echo.
+    echo [PERINGATAN] Perintah 'docker' belum terdaftar di PATH.
+    echo Pastikan Docker Desktop sudah terinstal dan sedang dibuka/berjalan.
+    echo Jika Docker baru saja diinstal, silakan restart komputer atau buka Docker Desktop.
+    echo.
 ) else (
     docker --version
 )
@@ -38,12 +44,15 @@ REM 3. Setup Virtual Environment
 echo.
 echo [3/4] Menyiapkan Virtual Environment (.venv)...
 if not exist ".venv\Scripts\activate.bat" (
-    echo Membuat folder .venv...
+    echo Membuat folder virtual environment .venv...
     python -m venv .venv
 )
 
 if not exist ".venv\Scripts\activate.bat" (
-    echo [ERROR] Gagal membuat virtual environment (.venv).
+    echo.
+    echo [ERROR] Gagal membuat virtual environment Python.
+    echo Pastikan Anda memiliki izin tulis di folder ini.
+    echo.
     pause
     exit /b 1
 )
@@ -51,14 +60,16 @@ if not exist ".venv\Scripts\activate.bat" (
 call ".venv\Scripts\activate.bat"
 python -m pip install --upgrade pip --quiet
 echo Memasang dependensi dari requirements.txt...
-pip install -r requirements.txt --quiet
+pip install -r requirements.txt
 
 REM 4. Inisialisasi Database
 echo.
 echo [4/4] Menginisialisasi Database dan Security Keys...
 python -c "import manager; manager.init_db(); print('Database panel.db siap.')"
 if %errorlevel% neq 0 (
-    echo [ERROR] Gagal menginisialisasi database.
+    echo.
+    echo [ERROR] Terjadi kegagalan saat menginisialisasi database.
+    echo.
     pause
     exit /b 1
 )
@@ -68,6 +79,8 @@ echo ================================================================
 echo       INSTALASI SELESAI DAN SIAP DIGUNAKAN!
 echo ================================================================
 echo.
-echo Anda dapat menjalankan aplikasi dengan klik ganda file "run.bat"
+echo Panel sudah siap. Anda dapat menjalankan panel dengan klik ganda:
+echo   - run.bat
 echo.
 pause
+
