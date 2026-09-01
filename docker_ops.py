@@ -72,18 +72,24 @@ def _run(argv: list[str], timeout: int = 60) -> dict:
     if sys.platform != "win32":
         env["PATH"] = "/usr/bin:/bin:/usr/local/bin:" + env.get("PATH", "")
     else:
-        # Tambahkan path instalasi standar Docker Desktop di Windows
+        # Tambahkan semua kemungkinan direktori Docker Desktop & CLI di Windows
         extra_paths = [
             os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Docker", "Docker", "resources", "bin"),
             os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Docker", "Docker", "resources"),
+            os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Docker", "Docker"),
             os.path.join(os.environ.get("ProgramW6432", r"C:\Program Files"), "Docker", "Docker", "resources", "bin"),
             os.path.join(os.environ.get("ProgramW6432", r"C:\Program Files"), "Docker", "Docker", "resources"),
+            os.path.join(os.environ.get("ProgramW6432", r"C:\Program Files"), "Docker", "Docker"),
+            os.path.join(os.environ.get("LOCALAPPDATA", r"C:\Users\Default\AppData\Local"), "Docker", "resources", "bin"),
+            os.path.join(os.environ.get("LOCALAPPDATA", r"C:\Users\Default\AppData\Local"), "Programs", "Docker", "Docker", "resources", "bin"),
         ]
         curr_path = env.get("PATH", "")
         for ep in extra_paths:
             if os.path.isdir(ep) and ep not in curr_path:
                 curr_path = ep + os.pathsep + curr_path
         env["PATH"] = curr_path
+        # Nonaktifkan credential helper eksternal sementara jika helper bermasalah di level OS Windows
+        env.setdefault("DOCKER_CONFIG", os.path.join(os.environ.get("USERPROFILE", r"C:\Users\Default"), ".docker"))
     try:
         p = subprocess.run(
             argv, capture_output=True, text=True,
@@ -94,6 +100,7 @@ def _run(argv: list[str], timeout: int = 60) -> dict:
         return {"ok": False, "out": "", "err": f"timeout after {timeout}s", "code": -1}
     except FileNotFoundError as e:
         return {"ok": False, "out": "", "err": str(e), "code": -1}
+
 
 
 

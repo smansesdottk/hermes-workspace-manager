@@ -7,13 +7,17 @@ color 0A
 
 cd /d "%~dp0"
 
-REM Tambahkan path default Docker Desktop Windows jika belum ada di PATH
+REM Tambahkan semua direktori Docker Desktop Windows ke PATH
 if exist "%ProgramFiles%\Docker\Docker\resources\bin\docker.exe" (
-    set "PATH=%ProgramFiles%\Docker\Docker\resources\bin;%ProgramFiles%\Docker\Docker\resources;%PATH%"
+    set "PATH=%ProgramFiles%\Docker\Docker\resources\bin;%ProgramFiles%\Docker\Docker\resources;%ProgramFiles%\Docker\Docker;%PATH%"
 )
 if exist "%ProgramFiles%\Docker\Docker\docker.exe" (
     set "PATH=%ProgramFiles%\Docker\Docker;%PATH%"
 )
+if exist "%LOCALAPPDATA%\Docker\resources\bin\docker.exe" (
+    set "PATH=%LOCALAPPDATA%\Docker\resources\bin;%LOCALAPPDATA%\Docker\resources;%PATH%"
+)
+
 
 if not exist ".venv\Scripts\activate.bat" (
 
