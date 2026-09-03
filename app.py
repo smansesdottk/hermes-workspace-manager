@@ -34,7 +34,9 @@ import requests
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from flask_wtf.csrf import CSRFProtect
 from markupsafe import escape
+from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash
+
 
 import docker_ops
 import manager
@@ -519,10 +521,14 @@ def instance_page(slug: str):
         u, inst = _owned_instance(slug)
         detail = manager.instance_detail(inst)
         return render_template("instance.html", me=u, inst=inst, d=detail, active_tab="dashboard")
+    except HTTPException:
+        raise
     except Exception as e:
+
         import traceback
         traceback.print_exc()
         return render_template("error.html", code=500, msg=f"Gagal memuat instance: {str(e)}"), 500
+
 
 
 
