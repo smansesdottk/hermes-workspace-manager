@@ -335,7 +335,15 @@
           progEl.style.display = 'block';
           progEl.textContent = (seed.last_build.ok ? '✓ ' : '⚠️ ') + seed.last_build.message;
         }
-        let isUpdated = git.remote_sha && git.local_commit.startsWith(git.remote_sha);
+        let isUpdated = false;
+        if(git.remote_sha) {
+          if(git.local_commit && git.local_commit.startsWith(git.remote_sha)) {
+            isUpdated = true;
+          } else if(git.local_commit && git.local_commit.includes('Docker Image') && seed.last_build && seed.last_build.ok) {
+            // Pada standalone/Windows image Docker Hub: jika pull image master baru saja sukses
+            isUpdated = true;
+          }
+        }
         if(badgeEl){
           if(isUpdated){
             badgeEl.textContent = 'terbaru (up to date)';
@@ -348,6 +356,7 @@
             badgeEl.className = 'badge b-run';
           }
         }
+
       }
     } catch(e){}
   }
