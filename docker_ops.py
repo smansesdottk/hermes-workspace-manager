@@ -166,10 +166,24 @@ def inspect_json(name: str) -> list | None:
 
 def logs(instance: str, service: str, tail: int = 120) -> str:
     tail = max(10, min(int(tail), 500))
-    r = _run([DOCKER_BIN, "logs", "--tail", str(tail), container_name(instance, service)], timeout=45)
-    text = r["out"] or r["err"]
+    cname = container_name(instance, service)
+    r = _run([DOCKER_BIN, "logs", "--tail", str(tail), cname], timeout=45)
+    err_msg = str(r.get("err") or "")
+    text = str(r.get("out") or "") + (("\n" + err_msg) if err_msg else "")
+
+    if not text.strip():
+        # Coba cek apakah container memang sedang running atau ada status inspect
+        st = inspect_json(cname)
+        if st and isinstance(st, list) and len(st) > 0:
+            state = st[0].get("State", {})
+            status = state.get("Status", "unknown")
+            started = state.get("StartedAt", "-")
+            text = f"[{cname} status: {status}, started: {started}]\n(Belum ada output log baru dari container ini)"
+        else:
+            text = f"(Belum ada log dari container {cname})"
     # strip ANSI agar log aman ditampilkan mentah di browser
-    return re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text)
+    return re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text).strip()
+
 
 
 def stats_line(container: str) -> dict | None:
