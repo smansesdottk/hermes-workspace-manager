@@ -88,8 +88,22 @@ def _run(argv: list[str], timeout: int = 60) -> dict:
             if os.path.isdir(ep) and ep not in curr_path:
                 curr_path = ep + os.pathsep + curr_path
         env["PATH"] = curr_path
-        # Nonaktifkan credential helper eksternal sementara jika helper bermasalah di level OS Windows
-        env.setdefault("DOCKER_CONFIG", os.path.join(os.environ.get("USERPROFILE", r"C:\Users\Default"), ".docker"))
+
+        # SOLUSI PERMANEN DOCKER-CREDENTIAL-DESKTOP DI WINDOWS:
+        # Jika file ~/.docker/config.json di Windows memuat "credsStore": "desktop", namun helper
+        # docker-credential-desktop.exe tidak ditemukan di PATH, Docker CLI akan crash saat pull.
+        # Kita buat direktori config docker terisolasi tanpa credsStore agar pull publik selalu berhasil.
+        docker_clean_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".docker_clean_config")
+        try:
+            os.makedirs(docker_clean_cfg, exist_ok=True)
+            cfg_file = os.path.join(docker_clean_cfg, "config.json")
+            if not os.path.isfile(cfg_file):
+                with open(cfg_file, "w", encoding="utf-8") as f:
+                    f.write("{}\n")
+            env["DOCKER_CONFIG"] = docker_clean_cfg
+        except Exception:
+            pass
+
     try:
         p = subprocess.run(
             argv, capture_output=True, text=True,
