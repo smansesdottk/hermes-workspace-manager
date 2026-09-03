@@ -947,10 +947,19 @@ def get_git_upstream_version() -> dict:
     hermes_repo_dir = "/home/malik/docker-ai-stack/hermes-agent"
     local_commit = "unknown"
     local_time = ""
+    # 1. Cek folder source lokal jika ada (server Linux dev/host)
     if os.path.exists(hermes_repo_dir):
         r = docker_ops._run(["git", "-C", hermes_repo_dir, "log", "-1", "--format=%h - %s (%ci)"])
         if r["ok"] and r["out"].strip():
             local_commit = r["out"].strip()
+    else:
+        # 2. Jika di Windows atau standalone host, ambil info dari Docker image yang terpasang
+        h_inspect = _inspect_image_id(HERMES_IMAGE, is_container=False)
+        if h_inspect:
+            parts = h_inspect.split()
+            sha = parts[0][:19] if parts else ""
+            created = parts[-1][:16].replace("T", " ") if len(parts) >= 2 else ""
+            local_commit = f"Docker Image ({sha}) {created}"
 
     # Remote check via API Github (timeout cepat 3 detik)
     remote_commit = "sama dengan lokal"
@@ -971,6 +980,7 @@ def get_git_upstream_version() -> dict:
         "remote_commit": remote_commit,
         "remote_sha": remote_sha
     }
+
 
 
 def get_instance_version_info(slug: str) -> dict:
@@ -1016,7 +1026,7 @@ def get_instance_version_info(slug: str) -> dict:
 
 
 def trigger_hermes_seed_rebuild_async() -> dict:
-    """Memulai build image bibit Hermes di background thread agar tidak terkena Cloudflare Timeout 524."""
+    """Memulai update / build image bibit Hermes di background thread."""
     with _seed_build_lock:
         if _seed_build_state["running"]:
             return {"ok": False, "message": "Proses update image bibit sedang berjalan di background."}
@@ -1024,15 +1034,19 @@ def trigger_hermes_seed_rebuild_async() -> dict:
         _seed_build_state["service"] = "hermes"
         _seed_build_state["started_at"] = now()
         _seed_build_state["ok"] = None
-        _seed_build_state["message"] = "Sedang menarik source code git & me-rebuild Docker image..."
+        _seed_build_state["message"] = "Sedang mengupdate image bibit Hermes..."
 
     def _worker():
         hermes_repo_dir = "/home/malik/docker-ai-stack/hermes-agent"
         try:
-            # 1. Fetch/pull git
-            docker_ops._run(["git", "-C", hermes_repo_dir, "pull", "origin", "main"], timeout=180)
-            # 2. Rebuild
-            res = docker_ops._run([docker_ops.DOCKER_BIN, "build", "-t", HERMES_IMAGE, hermes_repo_dir], timeout=900)
+            # 1. Jika folder source code lokal ada, lakukan git pull dan docker build
+            if os.path.exists(hermes_repo_dir):
+                docker_ops._run(["git", "-C", hermes_repo_dir, "pull", "origin", "main"], timeout=180)
+                res = docker_ops._run([docker_ops.DOCKER_BIN, "build", "-t", HERMES_IMAGE, hermes_repo_dir], timeout=900)
+            else:
+                # 2. Di Windows / host standalone tanpa folder source, langsung pull image resmi dari Docker Hub
+                res = docker_ops._run([docker_ops.DOCKER_BIN, "pull", HERMES_IMAGE], timeout=900)
+
             with _seed_build_lock:
                 _seed_build_state["running"] = False
                 _seed_build_state["finished_at"] = now()
@@ -1047,7 +1061,8 @@ def trigger_hermes_seed_rebuild_async() -> dict:
                 _seed_build_state["message"] = f"Error: {e}"
 
     threading.Thread(target=_worker, daemon=True).start()
-    return {"ok": True, "message": "Proses build image bibit Hermes telah dimulai di background."}
+    return {"ok": True, "message": "Proses update image bibit Hermes telah dimulai di background."}
+
 
 
 def rebuild_hermes_seed_image() -> dict:
